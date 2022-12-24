@@ -18,3 +18,7 @@
     * 触发fetcher_config_pool的更新
     * 触发maintainer的更新，把相关的 instance_id 的need_update状态改为True
 * 过一段较短的时间，每个蹲饼器传来请求，更新自己的config，need_update分别改为False
+
+
+## 智能调度
+* TODO
