@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
 from src.instance_utils import get_new_instance_name
 from src._log_lib import logger
-from src.db import HandleMysql
+from src.db import HandleMysql, HandleRedis
 
 
 class FetcherConfigPool(object):
@@ -59,6 +59,11 @@ class Maintainer(object):
 
         #
         self.alive_instance_id_list = []
+
+        self._init_conn_redis(conf)
+
+    def _init_conn_redis(self, conf):
+        self.redis = HandleRedis(conf)
 
     def delete_instance(self, instance_id):
         '''

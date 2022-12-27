@@ -90,8 +90,8 @@ class HealthMonitor(object):
     定时任务以确定健康的蹲饼器数量，从而调整config.
     """
     def __init__(self):
-        # 记录上一次扫描结束时，存活的蹲饼器数量.
-        self.alive_fetcher_count = 0
+        # 记录上一次扫描结束时，存活的蹲饼器
+        self.last_alive_fetcher_list = []
 
     def health_scan(self):
         '''
@@ -116,7 +116,7 @@ class HealthMonitor(object):
             warning_ddl = maintainer.WARNING_TIMEOUT + maintainer._last_updated_time[instance_id]
 
             # 彻底移除心跳ddl
-            remove_ddl = maintainer.WARNING_TIMEOUT + maintainer._last_updated_time[instance_id]
+            remove_ddl = maintainer.REMOVE_TIMEOUT + maintainer._last_updated_time[instance_id]
             # logger.info('[DEADLINE] {}:{}'.format(
             #     humanize.time.naturaltime(instance_id),
             #     humanize.time.naturaltime(deadline))
@@ -136,18 +136,21 @@ class HealthMonitor(object):
                 )
 
             else:
-                cur_alive_count += 1
                 cur_alive_list.append(instance_id)
                 logger.info('[ALIVE]: {}'.format(
                     humanize.time.naturaltime(instance_id))
                 )
                 maintainer.alive_instance_id_list = cur_alive_list
-        # 健康蹲饼器的数量发生了变化
-        if cur_alive_count != self.alive_fetcher_count:
+        # 健康蹲饼器的list发生了变化
+        if set(cur_alive_list) != set(self.last_alive_fetcher_list):
             # 下次心跳请求时，给每个蹲饼器传回新的config.
             # 如果一个蹲饼器挂了之后又好了，分析一下这里.
             for instance_id in cur_alive_list:
                 maintainer.need_update[instance_id] = True
+            self.last_alive_fetcher_list = cur_alive_list
+
+            # 更新理论存活上限. need_update无论True还是False，都认为未来可能存活；被删除了则认为不会存活了。
+            maintainer.redis.set('cookie:fetcher:config:live:number', len(maintainer.need_update))
 
 
 health_monitor = HealthMonitor()
