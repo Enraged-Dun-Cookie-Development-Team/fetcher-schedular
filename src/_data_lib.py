@@ -43,13 +43,37 @@ class Maintainer(object):
         """
         :param conf: 设置TTL相关参数
         """
-        # 最长容忍蹲饼器无心跳的时间(单位：秒)
-        self.MAX_TIMEOUT = conf.get('MAX_TIMEOUT', 15)
+        # 需要告警的蹲饼器无心跳的时间(单位：秒)
+        self.WARNING_TIMEOUT = conf.get('WARNING_TIMEOUT', 15)
+        # 移除蹲饼器的时间(单位: 秒)
+        self.REMOVE_TIMEOUT = conf.get('REMOVE_TIMEOUT', 600)
+
         self._last_updated_time = dict()
-        logger.info('调度器初始化完成')
+        logger.info('调度器Maintainer初始化完成')
 
         # if need_update[instance_id], 更新instance_id对应的蹲饼器的config.
         self.need_update = dict()
+
+        # 当前使用的config名称. 会在健康蹲饼器的数量发生了变化后更新.
+        self.config_name = '1'
+
+        #
+        self.alive_instance_id_list = []
+
+    def delete_instance(self, instance_id):
+        '''
+        永久删除蹲饼器.
+        :param instance_id: 蹲饼器id
+        :return:
+        '''
+        if instance_id in self.alive_instance_id_list:
+            self.alive_instance_id_list.remove(instance_id)
+
+        if instance_id in self.need_update:
+            self.need_update.pop(instance_id)
+
+        if instance_id in self._last_updated_time:
+            self._last_updated_time.pop(instance_id)
 
     def update_instance_status(self,
                          instance_id: str = ''
@@ -62,21 +86,24 @@ class Maintainer(object):
 
         self._last_updated_time[new_name] = time.time()
 
+        # 1. 注册后默认不需要立即返回新config，等health_monitor发现之后会更新need_update状态，下一次心跳时返回新config.
+        # 2.
+        self.need_update[new_name] = False
         return new_name
 
-    def get_latest_fetcher_config(self, config_name, instance_id_list, instance_id):
+    def get_latest_fetcher_config(self, instance_id):
         """
         根据instance_id, 获取最新的蹲饼器配置.
-        :param config_name: 选取哪个config. 当前版本的config_name为 str(# of alive fetcher)
-        :param instance_id: 蹲饼器id
+        :param instance_id 要进行配置的蹲饼器id.
+        self.config_name: 选取哪个config. 当前版本的config_name为 str(# of alive fetcher)
         :return: 新config.
         """
-        cur_config = fetcher_config_pool[config_name]
+        cur_config = fetcher_config_pool[self.config_name]
 
-        assert instance_id in instance_id_list
+        assert instance_id in self.alive_instance_id_list
 
         i_idx = -1
-        for i_idx, cur_instance_id in enumerate(instance_id_list):
+        for i_idx, cur_instance_id in enumerate(self.alive_instance_id_list):
             if cur_instance_id == instance_id:
                 break
 

@@ -4,7 +4,7 @@ import os
 import sys
 import time
 import humanize
-sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # print(sys.path)
 from src._data_lib import maintainer, fetcher_config_pool
@@ -31,7 +31,7 @@ class RegisterHandler(web.RequestHandler):
 
         new_name = maintainer.update_instance_status(instance_id)
 
-        self.write(tornado.escape.json_encode({'instance_id': new_name}))
+        self.write(tornado.escape.json_encode({'code': 200, 'instance_id': new_name}))
 
 
 class MainSchedular(web.RequestHandler):
@@ -59,6 +59,10 @@ class MainSchedular(web.RequestHandler):
         instance_id = input_data.get('instance_id', '')
 
         # 先增加一步判断: 是否需要给蹲饼器更新配置.
+        # 如果需要更新配置:
+        if maintainer.need_update[instance_id]:
+            new_config = maintainer.get_latest_fetcher_config()
+
         new_name = maintainer.update_instance_status(instance_id)
 
         # 如需更新config，则为该instance_id的蹲饼器分配一个新的config
@@ -75,7 +79,7 @@ class ConfigUpdateHandler(web.RequestHandler):
             fetcher_config_pool.update()
             self.write({'status': 'success', 'code': 200})
         except:
-            self.write({'status': 'fail', 'code': 20100})
+            self.write({'status': 'fail', 'code': 500})
 
     def post(self, *args, **kwargs):
         pass
@@ -93,6 +97,7 @@ class HealthMonitor(object):
         '''
         1. 监控是否有蹲饼器挂掉了，进行log warning.
         2. 根据状态调整蹲饼策略.
+        3. 如果有蹲饼器超过一定时长还没有响应，认为它已经重启了。可以从maintainer当中删除了.
         :return:
         '''
         now = time.time()
@@ -103,30 +108,46 @@ class HealthMonitor(object):
             humanize.time.naturaltime(now))
         )
 
+        cur_alive_count = 0
+        cur_alive_list = []
+        for instance_id in maintainer._last_updated_time:
 
-        for instance_name in maintainer._last_updated_time:
+            # 告警心跳ddl
+            warning_ddl = maintainer.WARNING_TIMEOUT + maintainer._last_updated_time[instance_id]
 
-            # 获取心跳最晚允许时间
-            deadline = maintainer.MAX_TIMEOUT + maintainer._last_updated_time[instance_name]
-            logger.info('[DEADLINE] {}:{}'.format(
-                humanize.time.naturaltime(instance_name),
-                humanize.time.naturaltime(deadline))
-            )
+            # 彻底移除心跳ddl
+            remove_ddl = maintainer.WARNING_TIMEOUT + maintainer._last_updated_time[instance_id]
+            # logger.info('[DEADLINE] {}:{}'.format(
+            #     humanize.time.naturaltime(instance_id),
+            #     humanize.time.naturaltime(deadline))
+            # )
 
-            if now > deadline:
-                logger.warning('[NO HEART BEAT] {}'.format(
-                    humanize.time.naturaltime(instance_name))
+            # 超过最后期限，直接移除.
+            if now > remove_ddl:
+                maintainer.delete_instance(instance_id)
+                logger.warning('[REMOVE INSTANCE PERMANENTLY] {}, {}'.format(
+                    humanize.time.naturaltime(now), instance_id)
                 )
-                # 挂了要更新蹲饼策略:
-                '''
-                1. 重新计数现在处于ALIVE状态的蹲饼器数量与id.
-                2. 给每个ALIVE的id分配一个新的config到
-                '''
+
+            # 短期无响应，只是warning.
+            if now > warning_ddl:
+                logger.warning('[NO HEART BEAT] {}, {}'.format(
+                    humanize.time.naturaltime(now), instance_id)
+                )
 
             else:
+                cur_alive_count += 1
+                cur_alive_list.append(instance_id)
                 logger.info('[ALIVE]: {}'.format(
-                    humanize.time.naturaltime(instance_name))
+                    humanize.time.naturaltime(instance_id))
                 )
+                maintainer.alive_instance_id_list = cur_alive_list
+        # 健康蹲饼器的数量发生了变化
+        if cur_alive_count != self.alive_fetcher_count:
+            # 下次心跳请求时，给每个蹲饼器传回新的config.
+            # 如果一个蹲饼器挂了之后又好了，分析一下这里.
+            for instance_id in cur_alive_list:
+                maintainer.need_update[instance_id] = True
 
 
 health_monitor = HealthMonitor()
@@ -135,7 +156,7 @@ if __name__ == '__main__':
     application = web.Application([
         (r'/', MainSchedular),
         (r'/register', RegisterHandler),
-        (r'/config_update', ConfigUpdateHandler),
+        (r'/config-update', ConfigUpdateHandler),
     ])
     application.listen(12345)
     ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()  # start scheduler 每隔2s执行一次f2s
