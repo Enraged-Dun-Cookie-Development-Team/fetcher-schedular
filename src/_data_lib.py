@@ -21,7 +21,7 @@ class FetcherConfigPool(object):
     """
     def __init__(self, conf):
         self.mysql_handler = HandleMysql(conf)
-
+        logger.info('[MYSQL conn] success.')
         # 直接分配给蹲饼器的config.
         self.config_pool = dict()
 
@@ -119,6 +119,7 @@ class Maintainer(object):
 
     def _init_conn_redis(self, conf):
         self.redis = HandleRedis(conf)
+        logger.info('[REDIS conn] success.')
 
     def delete_instance(self, instance_id):
         '''
