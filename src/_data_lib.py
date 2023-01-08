@@ -2,6 +2,7 @@
 import time
 import os
 import sys
+from collections import defaultdict
 sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
 from src.instance_utils import get_new_instance_name
@@ -14,22 +15,76 @@ class FetcherConfigPool(object):
     维护每个蹲饼器的蹲饼策略.
     v1.0: 来自后台的配置.
     config_pool的 data schema:
-        key: string，通过key可以取出对应的config.
-        value: List(dict), 列表长度代表蹲饼器数量；每个dict为对应一个蹲饼器的config.
+        230101更新:
+        key: string. fetcher的instance_id.
+        value: dict, 该蹲饼器对应的配置.
     """
     def __init__(self, conf):
         self.mysql_handler = HandleMysql(conf)
+
+        # 直接分配给蹲饼器的config.
         self.config_pool = dict()
 
-    def update(self):
+        # 平台列表
+        self.platform_list = []
+
+        # 二层字典，第一层key为platform，第二层key为str(live_number)
+        self.platform_config_by_live_number = defaultdict(dict)
+
+        # 初始化全部平台的全部live_number的配置.
+        self.startup_init()
+
+    def startup_init(self):
         """
-        响应来自后端的更新请求，更新所有情况的config.
+        调度器启动时，初始获取全部配置
         :return:
         """
+        # 先获取全部平台
+        self.get_latest_platform_list()
+        # 然后对每个平台都使用update.
+        for platform in self.platform_list:
+            self.update(platform)
+
+    def update(self, platform_to_update):
+        """
+        响应来自后端的更新请求，更新：
+        1. 对应 platform_to_update 的所有live_number的config.
+        2. platform_list
+        :return:
+        """
+        # TODO.
+
+        # 更新平台列表
+        self.get_latest_platform_list()
+
+        # 更新platform的配置.
+        # mock data
+        self.platform_config_by_live_number['bilibili'] = {"1": {'data_source': [{'uid': '1265652806'}]}}
         pass
 
-    def __getitem__(self, item):
-        return self.config_pool[item]
+    def get_latest_platform_list(self):
+        """
+        获取当前蹲饼器蹲的所有平台.
+        :return:
+        """
+        # TODO.
+
+        # 没变化就不更新了。
+        # if set(platform_res) == set(self.platform_list):
+        #     pass
+        # else:
+        #     self.platform_list
+        pass
+
+    def config_fetcher_manage(self):
+        """
+        根据必要的数据信息(存活蹲饼器数量；被ban平台情况；当前各平台基于live_number的config，group信息)，分配蹲饼器所需的config
+        TODO.
+        :return:
+        """
+
+    def __getitem__(self, fetcher_instance_id):
+        return self.config_pool[fetcher_instance_id]
 
 
 class Maintainer(object):
@@ -48,19 +103,19 @@ class Maintainer(object):
         # 移除蹲饼器的时间(单位: 秒)
         self.REMOVE_TIMEOUT = conf.get('REMOVE_TIMEOUT', 600)
 
+        # instance-level heart beat 记录
         self._last_updated_time = dict()
-        logger.info('调度器Maintainer初始化完成')
+        # instance-platform-level heart beat 记录
+        self._last_failed_platform_by_instance = defaultdict(list)
 
         # if need_update[instance_id], 更新instance_id对应的蹲饼器的config.
         self.need_update = dict()
 
-        # 当前使用的config名称. 会在健康蹲饼器的数量发生了变化后更新.
-        self.config_name = '1'
-
-        #
         self.alive_instance_id_list = []
 
         self._init_conn_redis(conf)
+
+        logger.info('调度器Maintainer初始化完成')
 
     def _init_conn_redis(self, conf):
         self.redis = HandleRedis(conf)
@@ -81,8 +136,16 @@ class Maintainer(object):
             self._last_updated_time.pop(instance_id)
 
     def update_instance_status(self,
-                         instance_id: str = ''
+                         instance_id: str = '',
+                         failed_platform_list: list = [],
                          ):
+        """
+        更新蹲饼器实例(instance_id)级别的健康状态.
+        此处同时考虑平台级别的健康状态.
+
+        :param instance_id: 蹲饼器id
+        :return:
+        """
         if not instance_id:
             new_name = get_new_instance_name(self._last_updated_time)
 
@@ -98,22 +161,14 @@ class Maintainer(object):
 
     def get_latest_fetcher_config(self, instance_id):
         """
+        TODO: 需要更新成用instance_id直接从 fetcher_config_pool 里取
         根据instance_id, 获取最新的蹲饼器配置.
         :param instance_id 要进行配置的蹲饼器id.
-        self.config_name: 选取哪个config. 当前版本的config_name为 str(# of alive fetcher)
         :return: 新config.
         """
-        cur_config = fetcher_config_pool[self.config_name]
+        cur_config = fetcher_config_pool[instance_id]
 
-        assert instance_id in self.alive_instance_id_list
-
-        i_idx = -1
-        for i_idx, cur_instance_id in enumerate(self.alive_instance_id_list):
-            if cur_instance_id == instance_id:
-                break
-
-        # 取出对应位置的config作为当前蹲饼器的config.
-        return cur_config[i_idx]
+        return cur_config
 
 
 fetcher_config_pool = FetcherConfigPool(conf=dict())

@@ -39,9 +39,12 @@ class MainSchedular(web.RequestHandler):
     已有蹲饼器维持心跳并保证获取最新配置.
     如果无需变化则不更新.(200) 需要更新则更新(202)
 
-    更新包括两种情况:
-    1. 来自蹲饼器状态的变化，例如新增一个蹲饼器或某个蹲饼器心跳无响应，带来的有效蹲饼器数量的增加/减少。
-    2. 来自fetcher config的变化，fetcher config如果有更新，会强制要求所有(?)蹲饼器更新自己对应的config.
+    更新包括三种情况:
+    1. 来自蹲饼器健康数量的变化，例如新增一个蹲饼器或某个蹲饼器心跳无响应，带来的有效蹲饼器数量的增加/减少。
+    2. 来自蹲饼器健康状态的变化. 例如一个蹲饼器突然无法蹲微博了，则微博平台对应使用的配置会变成live_number - 1 的新配置.
+    3. 来自fetcher config的变化，fetcher config如果有更新，会强制要求所有(?)蹲饼器更新自己对应的config.
+
+    因为有2这种情况，所以每个蹲饼器拿到的config需要独立维护. 
 
     '''
     def get(self):
@@ -57,16 +60,31 @@ class MainSchedular(web.RequestHandler):
         input_data = tornado.escape.json_decode(self.request.body)
         logger.info(input_data)
         instance_id = input_data.get('instance_id', '')
+        # 记录没有被成功蹲饼的平台列表.
+        failed_platform_list = input_data.get('failed_platform', [])
 
         # 先增加一步判断: 是否需要给蹲饼器更新配置.
+
+        need_return_config = False
         # 如果需要更新配置:
         if maintainer.need_update[instance_id]:
             new_config = maintainer.get_latest_fetcher_config()
+            need_return_config = True
 
-        new_name = maintainer.update_instance_status(instance_id)
+        new_name = maintainer.update_instance_status(instance_id, failed_platform_list)
+
+        output_dict = {'instance_id': new_name}
+
+        if need_return_config:
+            # 返回新配置
+            output_dict['code'] = 202
+            output_dict['config'] = new_config
+        else:
+            # 无需返回新配置.
+            output_dict['code'] = 200
 
         # 如需更新config，则为该instance_id的蹲饼器分配一个新的config
-        self.write(tornado.escape.json_encode({'instance_id': new_name}))
+        self.write(tornado.escape.json_encode(output_dict))
         # 如果不需要更新
 
 
@@ -75,14 +93,23 @@ class ConfigUpdateHandler(web.RequestHandler):
     后台更新config的接口实现
     '''
     def get(self):
+        pass
+
+    def post(self, *args, **kwargs):
+        """
+        更新某个平台 platform 的config.
+        :param args:
+        :param kwargs:
+        :return:
+        """
         try:
-            fetcher_config_pool.update()
+            input_data = tornado.escape.json_decode(self.request.body)
+            logger.info(input_data)
+            platform_to_update = input_data.get('platform', '')
+            fetcher_config_pool.update(platform_to_update)
             self.write({'status': 'success', 'code': 200})
         except:
             self.write({'status': 'fail', 'code': 500})
-
-    def post(self, *args, **kwargs):
-        pass
 
 
 class HealthMonitor(object):
@@ -92,11 +119,13 @@ class HealthMonitor(object):
     def __init__(self):
         # 记录上一次扫描结束时，存活的蹲饼器
         self.last_alive_fetcher_list = []
+        # 记录每个蹲饼器没有
+        self.failed_platform_list_in_last_alive_fetcher = {}
 
     def health_scan(self):
         '''
         1. 监控是否有蹲饼器挂掉了，进行log warning.
-        2. 根据状态调整蹲饼策略.
+        2. 健康状态是以平台为单位的，某个蹲饼器蹲不同平台的健康状态不同。根据状态调整蹲饼策略.
         3. 如果有蹲饼器超过一定时长还没有响应，认为它已经重启了。可以从maintainer当中删除了.
         :return:
         '''
