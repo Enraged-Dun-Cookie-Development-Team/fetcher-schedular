@@ -5,9 +5,15 @@
 调度器发挥作用的场景请参考[典型场景记录](docs/scene.md)
 
 # 运行方式
-施工中，采用[tornado](https://www.tornadoweb.org/en/stable/)框架，暂时通过
-``python src/schedular.py`` 启动。后续补充依赖项。
- 
 
-# 项目结构
-待补充
+施工中，项目采用[tornado](https://www.tornadoweb.org/en/stable/)框架。
+通过在项目根目录
+
+``pip install -r requirement.txt`` 安装依赖项；
+
+``python3 src/schedular.py`` 启动。
+
+
+# 可用接口
+
+请参考测试脚本 [test_post.py](dev-test/test_post.py) 获知目前可以调通的接口。

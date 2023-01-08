@@ -68,7 +68,7 @@ class MainSchedular(web.RequestHandler):
         need_return_config = False
         # 如果需要更新配置:
         if maintainer.need_update[instance_id]:
-            new_config = maintainer.get_latest_fetcher_config()
+            new_config = maintainer.get_latest_fetcher_config(instance_id)
             need_return_config = True
 
         new_name = maintainer.update_instance_status(instance_id, failed_platform_list)
