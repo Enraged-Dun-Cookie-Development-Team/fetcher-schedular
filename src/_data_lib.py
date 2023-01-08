@@ -101,7 +101,7 @@ class Maintainer(object):
         # 需要告警的蹲饼器无心跳的时间(单位：秒)
         self.WARNING_TIMEOUT = conf.get('WARNING_TIMEOUT', 15)
         # 移除蹲饼器的时间(单位: 秒)
-        self.REMOVE_TIMEOUT = conf.get('REMOVE_TIMEOUT', 600)
+        self.REMOVE_TIMEOUT = conf.get('REMOVE_TIMEOUT', 30)
 
         # instance-level heart beat 记录
         self._last_updated_time = dict()

@@ -45,6 +45,9 @@ class HandleRedis:
         return self.conn.set(name, value)
 
 
+sql_client = HandleMysql(dict())
+
+
 def fetch_col_names(table_name_list) -> dict:
     output_dict = dict()
     for table_name in table_name_list:
@@ -105,7 +108,6 @@ if __name__ == '__main__':
     # r = HandleRedis(dict())
     # r.set('a', 'b')
     # print(r.get('a')) # ✓
-    sql_client = HandleMysql(dict())
     print(sql_client.executeSql('select * from fetcher_datasource_config'))
 
     fetcher_datasource_config_df = select_fetcher_datasource_config(platform='bilibili')

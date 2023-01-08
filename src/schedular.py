@@ -106,8 +106,13 @@ class ConfigUpdateHandler(web.RequestHandler):
             input_data = tornado.escape.json_decode(self.request.body)
             logger.info(input_data)
             platform_to_update = input_data.get('platform', '')
-            fetcher_config_pool.update(platform_to_update)
-            self.write({'status': 'success', 'code': 200})
+
+            if not platform_to_update:
+                self.write({'status': 'no platform selected to update', 'code': 500})
+
+            else:
+                fetcher_config_pool.update(platform_to_update)
+                self.write({'status': 'success', 'code': 200})
         except:
             self.write({'status': 'fail', 'code': 500})
 
@@ -139,7 +144,8 @@ class HealthMonitor(object):
 
         cur_alive_count = 0
         cur_alive_list = []
-        for instance_id in maintainer._last_updated_time:
+        last_updated_instance_list = list(maintainer._last_updated_time.keys())
+        for instance_id in last_updated_instance_list:
 
             # 告警心跳ddl
             warning_ddl = maintainer.WARNING_TIMEOUT + maintainer._last_updated_time[instance_id]
