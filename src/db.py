@@ -36,7 +36,10 @@ class HandleRedis:
     def __init__(self, conf):
         self.port = int(conf.get('port', 6379))
         self.db = int(conf.get('db', 0))
-        self.conn = redis.StrictRedis(host='localhost', port=self.port, db=self.db)
+        self.conn = redis.StrictRedis(
+            host='localhost',
+            port=self.port,
+            db=self.db)
 
     def get(self, name):
         return self.conn.get(name)

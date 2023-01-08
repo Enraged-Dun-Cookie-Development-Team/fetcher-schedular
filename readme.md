@@ -11,6 +11,8 @@
 
 ``pip install -r requirement.txt`` 安装依赖项；
 
+开发时，于[db.py](src/db.py)中修改相关数据库连接的配置。(稍后改为环境变量传入)
+
 ``python3 src/schedular.py`` 启动。
 
 
