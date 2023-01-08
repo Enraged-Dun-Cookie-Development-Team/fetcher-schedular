@@ -11,7 +11,7 @@ port = 12345  # 设置端口
 # res = requests.post(url, json=input_data)
 # print(res.content)
 
-# 2. 蹲饼器要求更新配置测试
+# 2. 后端要求更新配置测试
 # url = 'http://0.0.0.0:{}/config-update'.format(port)
 # input_data = {'platform': 'weibo'}
 # res = requests.post(url, json=input_data)
