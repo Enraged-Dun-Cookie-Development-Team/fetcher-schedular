@@ -63,15 +63,16 @@ class MainSchedular(web.RequestHandler):
         # 记录没有被成功蹲饼的平台列表.
         failed_platform_list = input_data.get('failed_platform', [])
 
-        # 先增加一步判断: 是否需要给蹲饼器更新配置.
+        # 不涉及数据库操作，只对内存里已有的活跃蹲饼器进行梳理和记录，扫描时再进行配置的更新.
+        new_name = maintainer.update_instance_status(instance_id, failed_platform_list)
 
+        # 判断: 是否需要给蹲饼器更新配置.
         need_return_config = False
+        new_config = {}
         # 如果需要更新配置:
         if maintainer.need_update[instance_id]:
-            new_config = maintainer.get_latest_fetcher_config(instance_id)
+            new_config = maintainer.get_latest_fetcher_config(instance_id)  # 是在心跳扫描时计算的。这里只是取出结果.
             need_return_config = True
-
-        new_name = maintainer.update_instance_status(instance_id, failed_platform_list)
 
         output_dict = {'instance_id': new_name}
 
@@ -83,9 +84,7 @@ class MainSchedular(web.RequestHandler):
             # 无需返回新配置.
             output_dict['code'] = 200
 
-        # 如需更新config，则为该instance_id的蹲饼器分配一个新的config
         self.write(tornado.escape.json_encode(output_dict))
-        # 如果不需要更新
 
 
 class ConfigUpdateHandler(web.RequestHandler):
@@ -124,14 +123,16 @@ class HealthMonitor(object):
     def __init__(self):
         # 记录上一次扫描结束时，存活的蹲饼器
         self.last_alive_fetcher_list = []
-        # 记录每个蹲饼器没有
-        self.failed_platform_list_in_last_alive_fetcher = {}
+        # 记录上一次 蹲饼器_平台 级别的失败列表
+        self.last_failed_flat_list = []
+
+        self.UPDATE_CONFIG_FLAG = False
 
     def health_scan(self):
         '''
-        1. 监控是否有蹲饼器挂掉了，进行log warning.
-        2. 健康状态是以平台为单位的，某个蹲饼器蹲不同平台的健康状态不同。根据状态调整蹲饼策略.
-        3. 如果有蹲饼器超过一定时长还没有响应，认为它已经重启了。可以从maintainer当中删除了.
+        1. 状态监控：监控是否有蹲饼器挂掉了，进行log warning.
+        2. 配置更新：健康状态是以平台为单位的，某个蹲饼器蹲不同平台的健康状态不同。根据状态调整蹲饼策略.
+        3. 实例管理：如果有蹲饼器超过一定时长还没有响应，认为它已经重启了。可以从maintainer当中删除了.
         :return:
         '''
         now = time.time()
@@ -142,9 +143,13 @@ class HealthMonitor(object):
             humanize.time.naturaltime(now))
         )
 
-        cur_alive_count = 0
-        cur_alive_list = []
+        # 通过对 上一次scan时 活跃的蹲饼器 和 这一次scan活跃的蹲饼器 进行对比，判断蹲饼器级别是否需要更新
         last_updated_instance_list = list(maintainer._last_updated_time.keys())
+        # 通过对上一次scan时平台级别被ban情况和当前被ban情况的对比，判断是否需要更新config.
+        failed_flat_list = maintainer.get_flat_failed_platform_instance_list()
+
+        # 更新活动的蹲饼器
+        cur_alive_list = []
         for instance_id in last_updated_instance_list:
 
             # 告警心跳ddl
@@ -165,7 +170,7 @@ class HealthMonitor(object):
                 )
 
             # 短期无响应，只是warning.
-            if now > warning_ddl:
+            elif now > warning_ddl:
                 logger.warning('[NO HEART BEAT] {}, {}'.format(
                     humanize.time.naturaltime(now), instance_id)
                 )
@@ -176,16 +181,30 @@ class HealthMonitor(object):
                     humanize.time.naturaltime(instance_id))
                 )
                 maintainer.alive_instance_id_list = cur_alive_list
-        # 健康蹲饼器的list发生了变化
+
+        # 活动的蹲饼器list发生了变化
         if set(cur_alive_list) != set(self.last_alive_fetcher_list):
+            self.UPDATE_CONFIG_FLAG = True
             # 下次心跳请求时，给每个蹲饼器传回新的config.
-            # 如果一个蹲饼器挂了之后又好了，分析一下这里.
+            # 如果一个蹲饼器挂了之后又好了，它的id会变化. 所以不冲突.
             for instance_id in cur_alive_list:
                 maintainer.need_update[instance_id] = True
             self.last_alive_fetcher_list = cur_alive_list
 
             # 更新理论存活上限. need_update无论True还是False，都认为未来可能存活；被删除了则认为不会存活了。
             maintainer.redis.set('cookie:fetcher:config:live:number', len(maintainer.need_update))
+
+        elif set(failed_flat_list) != set(self.last_failed_flat_list):
+            self.UPDATE_CONFIG_FLAG = True
+
+            for instance_id in cur_alive_list:
+                maintainer.need_update[instance_id] = True
+            self.last_failed_flat_list = failed_flat_list
+
+        if self.UPDATE_CONFIG_FLAG:
+            # 如需更新，则执行对全部配置的更新.
+            fetcher_config_pool.fetcher_config_update(maintainer)
+            self.UPDATE_CONFIG_FLAG = False  # 复位
 
 
 health_monitor = HealthMonitor()
