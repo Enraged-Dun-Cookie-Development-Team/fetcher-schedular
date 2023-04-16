@@ -87,7 +87,7 @@ class MainSchedular(web.RequestHandler):
         self.write(tornado.escape.json_encode(output_dict))
 
 
-class ConfigUpdateHandler(web.RequestHandler):
+class SchedularConfigHandler(web.RequestHandler):
     '''
     后台更新config的接口实现
     '''
@@ -211,9 +211,13 @@ health_monitor = HealthMonitor()
 
 if __name__ == '__main__':
     application = web.Application([
-        (r'/', MainSchedular),
+        (r'/heartbeat', MainSchedular),
         (r'/register', RegisterHandler),
-        (r'/config-update', ConfigUpdateHandler),
+        (r'/schedular-update-config', SchedularConfigHandler),
+        # 接口对齐
+        # (r'/report', ReportHandler),
+        # (r'/fetcher-get-config', FetcherConfigHandler),
+
     ])
     application.listen(12345)
     ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()  # start scheduler 每隔2s执行一次f2s

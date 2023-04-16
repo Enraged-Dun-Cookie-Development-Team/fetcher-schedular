@@ -1,4 +1,16 @@
 import numpy as np
+import sys
+import time
+import humanize
+import os
+import pandas as pd
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+# print(sys.path)
+from src.db import (select_fetcher_datasource_config, select_fetcher_config,
+                    select_fetcher_global_config, select_fetcher_platform_config)
+
 
 class DataPool:
     def __init__(self):
@@ -12,18 +24,17 @@ class DataPool:
         self.fetcher_platform_config_df = select_fetcher_platform_config()
 
 
-
 class BasicStrategy:
     """
     策略基类
     """
+
     def __init__(self):
         self.get_latest_data()
         self.status_matrix = None
 
     def get_latest_data(self):
         self.data_pool = DataPool()
-
 
     def get_platform_identifiers(self):
         """
@@ -38,9 +49,9 @@ class BasicStrategy:
         matrix_columns = ['platform'] + columns
 
         matrix = pd.DataFrame([
-                [default_value] * (len(columns) + 1)
-            ] * len(rows),
-        )
+                                  [default_value] * (len(columns) + 1)
+                              ] * len(rows),
+                              )
         matrix.columns = matrix_columns
         matrix.platform = rows
         matrix.index = matrix.platform
@@ -49,11 +60,13 @@ class BasicStrategy:
         matrix.pop('platform')
         return matrix
 
+
 class ManualStrategy(BasicStrategy):
     """
     手动控制蹲饼逻辑 23.01.19
 
     """
+
     def __init__(self):
         super(ManualStrategy, self).__init__()
 
@@ -78,7 +91,6 @@ class ManualStrategy(BasicStrategy):
         fetcher_datasource_config_df = self.data_pool.fetcher_datasource_config_df
         fetcher_global_config_df = self.data_pool.fetcher_global_config_df
         fetcher_platform_config_df = self.data_pool.fetcher_platform_config_df
-
 
         #################### status matrix update ##############################
 
@@ -112,26 +124,31 @@ class ManualStrategy(BasicStrategy):
 
         # 首先计算某个平台现在可用的蹲饼器数量.
         for p in self.status_matrix.index:
-            live_num_of_fetcher_p = self.status_matrix.loc[p].sum() # 例如 = 2
+            live_num_of_fetcher_p = self.status_matrix.loc[p].sum()  # 例如 = 2
             # 然后去 fetcher_config_df 找 live_number 和 platform都能对上的
             df_tmp = fetcher_config_df[
                 np.logical_and(fetcher_config_df.live_number == live_num_of_fetcher_p,
-                              fetcher_config_df.platform == p)
-            ].copy() # 注意copy出来，避免修改原始数据.
+                               fetcher_config_df.platform == p)
+            ].copy()  # 注意copy出来，避免修改原始数据.
 
             print('#' * 30)
             print(p)
             print(df_tmp)
             matrix_datasource = set_config_in_matrix_datasource(df_tmp,
-                                            live_num_of_fetcher_p,
-                                            p,
-                                            self.status_matrix,
-                                            matrix_datasource
-                                           )
+                                                                fetcher_datasource_config_df,
+                                                                live_num_of_fetcher_p,
+                                                                p,
+                                                                self.status_matrix,
+                                                                matrix_datasource
+                                                                )
             print('^' * 20)
             print('matrix_datasource 处理后:')
             print(matrix_datasource)
-        return matrix_datasource
+
+        latest_config_pool = self.construct_config(matrix_datasource)
+        # fetcher_config_pool.config_pool = latest_config_pool
+
+        return latest_config_pool
 
     def _update_matrix_with_ban_info(self, ban_info):
         """
@@ -141,11 +158,72 @@ class ManualStrategy(BasicStrategy):
             for platform_identifier in ban_info[instance_id]:
                 self.status_matrix.loc[platform_identifier, instance_id] = 0
 
+    def construct_config(self, cur_matrix_datasource):
+        """
+        组装最新的config. doing
+        """
+        config_pool = dict()
+
+        # 给哪些蹲饼器生成配置
+        fetcher_names = cur_matrix_datasource.columns.tolist()
+
+        # 生成配置按平台取
+        platforms = cur_matrix_datasource.index.tolist()
+
+        # 取出全局配置.用dict存储
+        global_config_df = self.data_pool.fetcher_global_config_df
+        global_config_dict = dict()
+        for idx in range(global_config_df.shape[0]):
+            global_config_dict[global_config_df.iloc[idx]['key']] = global_config_df.iloc[idx]['value']
+
+        del global_config_df
+
+        platform_config_df = self.data_pool.fetcher_platform_config_df
+        platform_config_dict = dict()
+
+        for idx in range(platform_config_df.shape[0]):
+            platform_config_dict[platform_config_df.iloc[idx]['type_id']] = dict()
+
+            platform_config_dict[
+                platform_config_df.iloc[idx]['type_id']
+            ]['min_request_interval'] = platform_config_df.iloc[idx]['min_request_interval']
+
+        print(platform_config_dict)
+
+        del platform_config_df
+
+        for cur_fetcher in fetcher_names:
+
+            # 对每个fetcher构建一个config.
+            tmp_config = dict()
+            # 放入全局config:
+            for k in global_config_dict:
+                tmp_config[k] = global_config_dict[k]
+
+            tmp_config['groups'] = []
+
+            # groups放入这个蹲饼器独立的config.
+
+            for cur_platform in platforms:
+
+                # print(cur_platform, cur_fetcher)
+                cur_group_config = cur_matrix_datasource.loc[cur_platform, cur_fetcher]
+                if cur_group_config:
+                    tmp_config['groups'].append(cur_group_config)
+
+            # platform字段专门放最小间隔.
+            tmp_config['platform'] = platform_config_dict
+
+            config_pool[cur_fetcher] = tmp_config
+
+        return config_pool
+
     def __repr__(self):
         return str(self.status_matrix)
 
 
 def set_config_in_matrix_datasource(df_given_live_number,
+                                    fetcher_datasource_config_df,
                                     live_num_of_fetcher_p,
                                     platform_identifier,
                                     status_matrix,

@@ -180,8 +180,11 @@ class FetcherConfigPool(object):
         """
         根据必要的数据信息(存活蹲饼器数量；被ban平台情况；当前各平台基于live_number的config，group信息)，分配蹲饼器所需的config
         TODO.
-        :return:
+        :return: (无需返回值). 最新蹲饼器配置
         """
+        latest_config = manual_strategy.update(maintainer)
+
+        return latest_config
 
     def __getitem__(self, fetcher_instance_id):
         return self.config_pool[fetcher_instance_id]
