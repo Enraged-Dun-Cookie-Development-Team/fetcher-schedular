@@ -11,7 +11,6 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from src.db import (select_fetcher_datasource_config, select_fetcher_config,
                     select_fetcher_global_config, select_fetcher_platform_config)
 
-
 class DataPool:
     def __init__(self):
         self.get_latest_data()
@@ -24,11 +23,11 @@ class DataPool:
         self.fetcher_platform_config_df = select_fetcher_platform_config()
 
 
+
 class BasicStrategy:
     """
     策略基类
     """
-
     def __init__(self):
         self.get_latest_data()
         self.status_matrix = None
@@ -49,9 +48,9 @@ class BasicStrategy:
         matrix_columns = ['platform'] + columns
 
         matrix = pd.DataFrame([
-                                  [default_value] * (len(columns) + 1)
-                              ] * len(rows),
-                              )
+                [default_value] * (len(columns) + 1)
+            ] * len(rows),
+        )
         matrix.columns = matrix_columns
         matrix.platform = rows
         matrix.index = matrix.platform
@@ -60,13 +59,11 @@ class BasicStrategy:
         matrix.pop('platform')
         return matrix
 
-
 class ManualStrategy(BasicStrategy):
     """
     手动控制蹲饼逻辑 23.01.19
 
     """
-
     def __init__(self):
         super(ManualStrategy, self).__init__()
 
@@ -131,6 +128,7 @@ class ManualStrategy(BasicStrategy):
                                fetcher_config_df.platform == p)
             ].copy()  # 注意copy出来，避免修改原始数据.
 
+
             print('#' * 30)
             print(p)
             print(df_tmp)
@@ -149,6 +147,7 @@ class ManualStrategy(BasicStrategy):
         # fetcher_config_pool.config_pool = latest_config_pool
 
         return latest_config_pool
+
 
     def _update_matrix_with_ban_info(self, ban_info):
         """
