@@ -67,16 +67,17 @@ class ManualStrategy(BasicStrategy):
     def __init__(self):
         super(ManualStrategy, self).__init__()
 
-    def update(self, maintainer=None, fetcher_config_pool=None):
+    def update(self, maintainer=None):
         """
         实时状态从 maintainer 中获取.
-        结果存入 fetcher_config_pool.config_pool # key in [fetcher_instance_ids]
 
         1. 初始化一个状态矩阵
         2. 使用被ban信息修正状态矩阵中的状态
         3. 对于每个平台，根据当前alive数量，取出对应的config.
         4. 根据group，分配config.
         5. 最后加入全局信息.
+
+        # 返回值：以instance_id为key的各个蹲饼器配置dict.
         """
 
         #################### data update ##############################
@@ -91,8 +92,9 @@ class ManualStrategy(BasicStrategy):
 
         #################### status matrix update ##############################
 
-        fetcher_name_list = ['SilverAsh', 'Saria']
-        # fetcher_name_list = maintainer.alive_instance_id_list
+        # 
+        # fetcher_name_list = ['SilverAsh', 'Saria']
+        fetcher_name_list = maintainer.alive_instance_id_list
 
         platform_identifiers = self.get_platform_identifiers()
 
@@ -100,8 +102,8 @@ class ManualStrategy(BasicStrategy):
         self.status_matrix = self.initial_matrix(rows=platform_identifiers, columns=fetcher_name_list, default_value=1)
 
         # 平台被ban信息
-        ban_info = {'SilverAsh': [], 'Saria': ['weibo', 'netease-cloud-music']}
-        # ban_info = maintainer._failed_platform_by_instance
+        # ban_info = {'SilverAsh': [], 'Saria': ['weibo', 'netease-cloud-music']}
+        ban_info = maintainer._failed_platform_by_instance
 
         # 使用平台被ban信息更新状态矩阵
         self._update_matrix_with_ban_info(ban_info)

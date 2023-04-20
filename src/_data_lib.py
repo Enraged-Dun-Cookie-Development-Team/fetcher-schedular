@@ -67,9 +67,38 @@ class Maintainer(object):
         if instance_id in self._last_updated_time:
             self._last_updated_time.pop(instance_id)
 
+
+    def get_failed_platform_list(self, instance_id):
+        """
+        对某蹲饼器instance获取当前最新的失败平台列表.
+        """
+        return self._failed_platform_by_instance[instance_id]
+
+    def set_abnormal_platform(self, instance_id, abnormal_info):
+        """
+        对某蹲饼器instance，获取当前最新的异常平台列表.
+        目前 type == unavailable_platform 代表无法蹲该平台的饼.
+        {
+            "type": "string",
+            "value": "string"
+        }
+        """
+
+        cur_abnormal_type = abnormal_info.get('type', '')
+        # 仅处理 unavailable_platform
+        if cur_abnormal_type != 'unavailable_platform':
+            return self._failed_platform_by_instance[instance_id]
+
+        cur_failed_platform = abnormal_info['value']
+        self._failed_platform_by_instance[instance_id].append(cur_failed_platform)
+        self._failed_platform_by_instance[instance_id] = list(set(
+                                        self._failed_platform_by_instance[instance_id]))
+
+        return self._failed_platform_by_instance[instance_id]
+
     def update_instance_status(self,
                          instance_id: str = '',
-                         failed_platform_list: list = [],
+                         # failed_platform_list: list = [],
                          ):
         """
         更新蹲饼器实例(instance_id)级别的健康状态.
@@ -87,9 +116,12 @@ class Maintainer(object):
 
         else:
             new_name = instance_id
-            # 更新一下平台级别的失败记录.
-            self._failed_platform_by_instance[new_name] = failed_platform_list
-            self.need_update[new_name] = False
+            # 接口拆分了，更新failed_platform_list与蹲饼器心跳刷新解耦.
+            
+            # 登录新的fetcher. 如果已经登录了，则不改变当前fetcher的 self.need_update的状态.
+            if new_name not in self.need_update:
+                self.need_update[new_name] = False
+            
             self._last_updated_time[new_name] = time.time()
             return new_name
 
@@ -110,7 +142,8 @@ class Maintainer(object):
         :param instance_id 要进行配置的蹲饼器id.
         :return: 新config.
         """
-        cur_config = fetcher_config_pool[instance_id]
+        
+        cur_config = fetcher_config_pool.get(instance_id, dict()) # 
 
         return cur_config
 
@@ -121,8 +154,10 @@ class FetcherConfigPool(object):
     v1.0: 来自后台的配置.
     config_pool的 data schema:
         230101更新:
-        key: string. fetcher的instance_id.
-        value: dict, 该蹲饼器对应的配置.
+        key: String[instance_id]
+        value: Dict[该蹲饼器对应的配置]
+    
+    更新FetcherConfigPool存储的蹲饼策略时，依赖 strategy 和 maintainer.
     """
     def __init__(self, conf):
         self.mysql_handler = HandleMysql(conf)
@@ -130,65 +165,37 @@ class FetcherConfigPool(object):
         # 直接分配给蹲饼器的config.
         self.config_pool = dict()
 
-        # 平台列表
-        self.platform_list = []
+    # FetcherConfigPool 初始化时，不直接获取config. 
+    # 等待maintainer启动后，给出更新调度器config的指令，此时更新 FetcherConfigPool.
 
-        # 二层字典，第一层key为platform，第二层key为str(live_number)
-        self.platform_config_by_live_number = defaultdict(dict)
+    #     # 初始化全部平台的全部live_number的配置.
+    #     self.startup_init()
 
-        # 初始化全部平台的全部live_number的配置.
-        self.startup_init()
-
-    def startup_init(self):
-        """
-        调度器启动时，初始获取全部配置
-        :return:
-        """
-        # 先获取全部平台
-        self.get_latest_platform_list()
-        # 然后对每个平台都使用update.
-        for platform in self.platform_list:
-            self.update(platform)
-
-    def update(self, platform_to_update):
-        """
-        响应来自后端的更新请求，更新：
-        1. 对应 platform_to_update 的所有live_number的config.
-        2. platform_list
-        :return:
-        """
-        # TODO.
-
-        # 更新平台列表
-        self.get_latest_platform_list()
-
-        # 更新platform的配置.
-        # mock data
-        self.platform_config_by_live_number['bilibili'] = {"1": {'data_source': [{'uid': '1265652806'}]}}
-        pass
-
-    def get_latest_platform_list(self):
-        """
-        获取当前蹲饼器蹲的所有平台.
-        :return:
-        """
-        # TODO.
-
-        pass
+    # def startup_init(self, maintainer: Maintainer):
+    #     """
+    #     调度器启动时，初始获取全部配置
+    #     :return:
+    #     """
+    #     self.fetcher_config_update(maintainer)
 
     def fetcher_config_update(self, maintainer: Maintainer):
         """
         根据必要的数据信息(存活蹲饼器数量；被ban平台情况；当前各平台基于live_number的config，group信息)，分配蹲饼器所需的config
+        默认调用该函数时，全部蹲饼器的config都会更新.
+
         TODO.
+
         :return: (无需返回值). 最新蹲饼器配置
         """
-        latest_config = manual_strategy.update(maintainer)
+        self.config_pool = manual_strategy.update(maintainer)
 
-        return latest_config
+        # return latest_config
 
     def __getitem__(self, fetcher_instance_id):
         return self.config_pool[fetcher_instance_id]
 
 
 fetcher_config_pool = FetcherConfigPool(conf=dict())
+
+# @@@!!! maintainer 启动之后，捋一遍蹲饼器传入，以及更新config的过程.
 maintainer = Maintainer(conf=dict())

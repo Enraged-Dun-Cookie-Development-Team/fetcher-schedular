@@ -34,21 +34,36 @@ class RegisterHandler(web.RequestHandler):
         self.write(tornado.escape.json_encode({'code': 200, 'instance_id': new_name}))
 
 
-class MainSchedular(web.RequestHandler):
+class HeartBeatSchedular(web.RequestHandler):
     '''
-    已有蹲饼器维持心跳并保证获取最新配置.
-    如果无需变化则不更新.(200) 需要更新则更新(202)
+    已有蹲饼器维持心跳.
 
-    更新包括三种情况:
-    1. 来自蹲饼器健康数量的变化，例如新增一个蹲饼器或某个蹲饼器心跳无响应，带来的有效蹲饼器数量的增加/减少。
-    2. 来自蹲饼器健康状态的变化. 例如一个蹲饼器突然无法蹲微博了，则微博平台对应使用的配置会变成live_number - 1 的新配置.
-    3. 来自fetcher config的变化，fetcher config如果有更新，会强制要求所有(?)蹲饼器更新自己对应的config.
+    # 更新包括三种情况:
+    # 1. 来自蹲饼器健康数量的变化，例如新增一个蹲饼器或某个蹲饼器心跳无响应，带来的有效蹲饼器数量的增加/减少。
+    # 2. 来自蹲饼器健康状态的变化. 例如一个蹲饼器突然无法蹲微博了，则微博平台对应使用的配置会变成live_number - 1 的新配置.
+    # 3. 来自fetcher config的变化，fetcher config如果有更新，会强制要求所有(?)蹲饼器更新自己对应的config.
 
-    因为有2这种情况，所以每个蹲饼器拿到的config需要独立维护. 
+    # 因为有2这种情况，所以每个蹲饼器拿到的config需要独立维护. 
 
     '''
     def get(self):
-        pass
+        """
+        argument: instance_id 蹲饼器id.
+        return: 是否需要更新.
+        """
+        instance_id = self.get_argument('instance_id', '')
+
+        # 不涉及数据库操作，只对内存里已有的活跃蹲饼器进行梳理和记录，扫描时再进行配置的更新.
+        new_name = maintainer.update_instance_status(instance_id)
+
+        # 是否需要给蹲饼器更新配置.
+        need_return_config = maintainer.need_update(instance_id)
+
+        output_dict = dict()
+        output_dict['code'] = 0
+        output_dict['config'] = need_return_config
+
+        self.write(tornado.escape.json_encode(output_dict))
 
     def post(self, *args, **kwargs):
         '''
@@ -57,11 +72,17 @@ class MainSchedular(web.RequestHandler):
         :param kwargs:
         :return:
         '''
+        pass
+        """
+
         input_data = tornado.escape.json_decode(self.request.body)
         logger.info(input_data)
         instance_id = input_data.get('instance_id', '')
+        
+        # 2023-04-14 10:44 分拆成两个接口了.
         # 记录没有被成功蹲饼的平台列表.
         failed_platform_list = input_data.get('failed_platform', [])
+        
 
         # 不涉及数据库操作，只对内存里已有的活跃蹲饼器进行梳理和记录，扫描时再进行配置的更新.
         new_name = maintainer.update_instance_status(instance_id, failed_platform_list)
@@ -85,6 +106,100 @@ class MainSchedular(web.RequestHandler):
             output_dict['code'] = 200
 
         self.write(tornado.escape.json_encode(output_dict))
+        """
+
+
+class FetcherConfigHandler(web.RequestHandler):
+    '''
+    蹲饼器获取最新配置.
+    施工中.
+    '''
+    def get(self):
+        """
+        argument: instance_id 蹲饼器id.
+        return: latest config. (一定在有必要更新时，才会调用此接口)
+        """
+        instance_id = self.get_argument('instance_id', '')
+
+        output_dict = dict()
+        output_dict['code'] = 0
+        latest_config = maintainer.get_latest_fetcher_config(instance_id)  # 是在心跳扫描时计算的。这里只是取出结果.
+
+        output_dict['config'] = latest_config
+
+        self.write(tornado.escape.json_encode(output_dict))
+
+    def post(self, *args, **kwargs):
+        '''
+        处理蹲饼器心跳传入
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        pass
+        """
+
+        input_data = tornado.escape.json_decode(self.request.body)
+        logger.info(input_data)
+        instance_id = input_data.get('instance_id', '')
+        
+        # 2023-04-14 10:44 分拆成两个接口了.
+        # 记录没有被成功蹲饼的平台列表.
+        failed_platform_list = input_data.get('failed_platform', [])
+        
+
+        # 不涉及数据库操作，只对内存里已有的活跃蹲饼器进行梳理和记录，扫描时再进行配置的更新.
+        new_name = maintainer.update_instance_status(instance_id, failed_platform_list)
+
+        # 判断: 是否需要给蹲饼器更新配置.
+        need_return_config = False
+        new_config = {}
+        # 如果需要更新配置:
+        if maintainer.need_update[instance_id]:
+            new_config = maintainer.get_latest_fetcher_config(instance_id)  # 是在心跳扫描时计算的。这里只是取出结果.
+            need_return_config = True
+
+        output_dict = {'instance_id': new_name}
+
+        if need_return_config:
+            # 返回新配置
+            output_dict['code'] = 202
+            output_dict['config'] = new_config
+        else:
+            # 无需返回新配置.
+            output_dict['code'] = 200
+
+        self.write(tornado.escape.json_encode(output_dict))
+        """
+
+
+class ReportHandler(web.RequestHandler):
+    '''
+    记录蹲饼器传入的异常平台信息.
+    '''
+    def get(self):
+        pass
+
+    def post(self, *args, **kwargs):
+        '''
+        蹲饼器新增异常平台信息。一定伴随着当前instance_id的need_update = True
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        # instance_id 在 header里
+        instance_id = self.get_argument('instance_id', '')
+        # 其余信息在body里.
+        input_data = tornado.escape.json_decode(self.request.body)
+        
+        logger.info(instance_id)        
+        logger.info(input_data)
+        
+        # 更新异常平台信息.
+        maintainer.set_abnormal_platform(instance_id, input_data)
+        maintainer.need_update[instance_id] = True
+
+        self.write(tornado.escape.json_encode({'code': 0}))
 
 
 class SchedularConfigHandler(web.RequestHandler):
@@ -194,6 +309,7 @@ class HealthMonitor(object):
             # 更新理论存活上限. need_update无论True还是False，都认为未来可能存活；被删除了则认为不会存活了。
             maintainer.redis.set('cookie:fetcher:config:live:number', len(maintainer.need_update))
 
+        # 蹲饼器蹲失败的平台发生了变化.
         elif set(failed_flat_list) != set(self.last_failed_flat_list):
             self.UPDATE_CONFIG_FLAG = True
 
@@ -201,6 +317,7 @@ class HealthMonitor(object):
                 maintainer.need_update[instance_id] = True
             self.last_failed_flat_list = failed_flat_list
 
+        # maintainer更新最新的config的操作在这里
         if self.UPDATE_CONFIG_FLAG:
             # 如需更新，则执行对全部配置的更新.
             fetcher_config_pool.fetcher_config_update(maintainer)
@@ -211,12 +328,15 @@ health_monitor = HealthMonitor()
 
 if __name__ == '__main__':
     application = web.Application([
-        (r'/heartbeat', MainSchedular),
-        (r'/register', RegisterHandler),
+        # 心跳监控
+        (r'/heartbeat', HeartBeatSchedular),
+        # (r'/register', RegisterHandler),
+        # 蹲饼器向调度器报告无效平台
+        (r'/report', ReportHandler),
+        # 蹲饼器获取最新config
+        (r'/fetcher-get-config', FetcherConfigHandler),
+        # 后台通知蹲饼器更新config.
         (r'/schedular-update-config', SchedularConfigHandler),
-        # 接口对齐
-        # (r'/report', ReportHandler),
-        # (r'/fetcher-get-config', FetcherConfigHandler),
 
     ])
     application.listen(12345)
