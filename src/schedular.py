@@ -3,11 +3,14 @@ from tornado import web, ioloop
 import os
 import sys
 import time
+import json
 import humanize
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+import traceback
 
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+humanize.i18n.activate("zh_CN")
 # print(sys.path)
-from src._data_lib import maintainer, fetcher_config_pool
+from src._data_lib import maintainer, fetcher_config_pool, NpEncoder
 from src._log_lib import logger
 
 
@@ -57,7 +60,7 @@ class HeartBeatSchedular(web.RequestHandler):
         new_name = maintainer.update_instance_status(instance_id)
 
         # 是否需要给蹲饼器更新配置.
-        need_return_config = maintainer.need_update(instance_id)
+        need_return_config = maintainer.need_update[instance_id]
 
         output_dict = dict()
         output_dict['code'] = 0
@@ -127,7 +130,8 @@ class FetcherConfigHandler(web.RequestHandler):
 
         output_dict['config'] = latest_config
 
-        self.write(tornado.escape.json_encode(output_dict))
+        print(latest_config)
+        self.write(json.dumps(output_dict, cls=NpEncoder))
 
     def post(self, *args, **kwargs):
         '''
@@ -225,9 +229,12 @@ class SchedularConfigHandler(web.RequestHandler):
                 self.write({'status': 'no platform selected to update', 'code': 500})
 
             else:
-                fetcher_config_pool.update(platform_to_update)
+                # 初版为全量更新.
+                # TODO: 精细化更新，按照platform.
+                fetcher_config_pool.fetcher_config_update(maintainer)
                 self.write({'status': 'success', 'code': 200})
         except:
+            traceback.print_exc()
             self.write({'status': 'fail', 'code': 500})
 
 
@@ -251,12 +258,9 @@ class HealthMonitor(object):
         :return:
         '''
         now = time.time()
-
         # 定期扫描检测各个蹲饼器健康状态
         # 开始扫描
-        logger.info('[Start a new scan]: {}'.format(
-            humanize.time.naturaltime(now))
-        )
+        logger.info('[Start a new scan]')
 
         # 通过对 上一次scan时 活跃的蹲饼器 和 这一次scan活跃的蹲饼器 进行对比，判断蹲饼器级别是否需要更新
         last_updated_instance_list = list(maintainer._last_updated_time.keys())
@@ -280,21 +284,15 @@ class HealthMonitor(object):
             # 超过最后期限，直接移除.
             if now > remove_ddl:
                 maintainer.delete_instance(instance_id)
-                logger.warning('[REMOVE INSTANCE PERMANENTLY] {}, {}'.format(
-                    humanize.time.naturaltime(now), instance_id)
-                )
+                logger.warning('[REMOVE INSTANCE PERMANENTLY] {}'.format(instance_id))
 
             # 短期无响应，只是warning.
             elif now > warning_ddl:
-                logger.warning('[NO HEART BEAT] {}, {}'.format(
-                    humanize.time.naturaltime(now), instance_id)
-                )
+                logger.warning('[NO HEART BEAT] {}'.format(instance_id))
 
             else:
                 cur_alive_list.append(instance_id)
-                logger.info('[ALIVE]: {}'.format(
-                    humanize.time.naturaltime(instance_id))
-                )
+                logger.info('[ALIVE]: {}'.format(instance_id))
                 maintainer.alive_instance_id_list = cur_alive_list
 
         # 活动的蹲饼器list发生了变化
@@ -320,6 +318,7 @@ class HealthMonitor(object):
         # maintainer更新最新的config的操作在这里
         if self.UPDATE_CONFIG_FLAG:
             # 如需更新，则执行对全部配置的更新.
+            print(1)
             fetcher_config_pool.fetcher_config_update(maintainer)
             self.UPDATE_CONFIG_FLAG = False  # 复位
 

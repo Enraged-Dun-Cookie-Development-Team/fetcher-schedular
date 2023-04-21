@@ -4,6 +4,8 @@ import time
 import humanize
 import os
 import pandas as pd
+from src._log_lib import logger
+
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -58,6 +60,7 @@ class BasicStrategy:
         # 只作为index，从矩阵当中剔除
         matrix.pop('platform')
         return matrix
+
 
 class ManualStrategy(BasicStrategy):
     """
@@ -123,7 +126,13 @@ class ManualStrategy(BasicStrategy):
 
         # 首先计算某个平台现在可用的蹲饼器数量.
         for p in self.status_matrix.index:
-            live_num_of_fetcher_p = self.status_matrix.loc[p].sum()  # 例如 = 2
+            live_num_of_fetcher_p = self.status_matrix.loc[p].sum()   # 例如 = 2. 如果不足1, 直接报警.
+
+            if live_num_of_fetcher_p < 1:
+                logger.warning('# of available fetchers on platform: {} is smaller than 1.'.format(p))
+                # 防止报错程序崩溃.
+                # live_num_of_fetcher_p = 1
+
             # 然后去 fetcher_config_df 找 live_number 和 platform都能对上的
             df_tmp = fetcher_config_df[
                 np.logical_and(fetcher_config_df.live_number == live_num_of_fetcher_p,
@@ -131,9 +140,9 @@ class ManualStrategy(BasicStrategy):
             ].copy()  # 注意copy出来，避免修改原始数据.
 
 
-            print('#' * 30)
-            print(p)
-            print(df_tmp)
+            # print('#' * 30)
+            # print(p)
+            # print(df_tmp)
             matrix_datasource = set_config_in_matrix_datasource(df_tmp,
                                                                 fetcher_datasource_config_df,
                                                                 live_num_of_fetcher_p,
@@ -149,7 +158,6 @@ class ManualStrategy(BasicStrategy):
         # fetcher_config_pool.config_pool = latest_config_pool
 
         return latest_config_pool
-
 
     def _update_matrix_with_ban_info(self, ban_info):
         """
@@ -189,7 +197,7 @@ class ManualStrategy(BasicStrategy):
                 platform_config_df.iloc[idx]['type_id']
             ]['min_request_interval'] = platform_config_df.iloc[idx]['min_request_interval']
 
-        print(platform_config_dict)
+        # print(platform_config_dict)
 
         del platform_config_df
 
@@ -250,7 +258,9 @@ def set_config_in_matrix_datasource(df_given_live_number,
     '''
 
     physical_fetcher_idx = 0
-
+    if live_num_of_fetcher_p < 1:
+        logger.warning('skip platform:{} config updating due to unavailable fetchers'.format(platform_identifier))
+        return matrix_datasource
     for fetcher_idx in range(1, live_num_of_fetcher_p + 1):
 
         # 找到第一个有效的蹲饼器
@@ -304,6 +314,6 @@ def set_config_in_matrix_datasource(df_given_live_number,
 #                                )
 
 manual_strategy = ManualStrategy()
-manual_strategy.update(maintainer=None)
+# manual_strategy.update(maintainer=None)
 
 

@@ -24,9 +24,9 @@ class Maintainer(object):
         :param conf: 设置TTL相关参数
         """
         # 需要告警的蹲饼器无心跳的时间(单位：秒)
-        self.WARNING_TIMEOUT = conf.get('WARNING_TIMEOUT', 15)
+        self.WARNING_TIMEOUT = conf.get('WARNING_TIMEOUT', 150)
         # 移除蹲饼器的时间(单位: 秒)
-        self.REMOVE_TIMEOUT = conf.get('REMOVE_TIMEOUT', 30)
+        self.REMOVE_TIMEOUT = conf.get('REMOVE_TIMEOUT', 300)
 
         # instance-level heart beat 记录
         self._last_updated_time = dict()
@@ -66,7 +66,6 @@ class Maintainer(object):
 
         if instance_id in self._last_updated_time:
             self._last_updated_time.pop(instance_id)
-
 
     def get_failed_platform_list(self, instance_id):
         """
@@ -143,7 +142,7 @@ class Maintainer(object):
         :return: 新config.
         """
         
-        cur_config = fetcher_config_pool.get(instance_id, dict()) # 
+        cur_config = fetcher_config_pool[instance_id]
 
         return cur_config
 
@@ -183,8 +182,6 @@ class FetcherConfigPool(object):
         根据必要的数据信息(存活蹲饼器数量；被ban平台情况；当前各平台基于live_number的config，group信息)，分配蹲饼器所需的config
         默认调用该函数时，全部蹲饼器的config都会更新.
 
-        TODO.
-
         :return: (无需返回值). 最新蹲饼器配置
         """
         self.config_pool = manual_strategy.update(maintainer)
@@ -192,7 +189,26 @@ class FetcherConfigPool(object):
         # return latest_config
 
     def __getitem__(self, fetcher_instance_id):
-        return self.config_pool[fetcher_instance_id]
+        return self.config_pool.get(fetcher_instance_id, {})
+
+
+import json
+import numpy as np
+
+
+class NpEncoder(json.JSONEncoder):
+    """
+    numpy 和 pandas 库的数据都是numpy对象，不能直接json序列化. 转化成python原生数据格式.
+
+    """
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
 
 
 fetcher_config_pool = FetcherConfigPool(conf=dict())
