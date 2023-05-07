@@ -126,8 +126,7 @@ class ManualStrategy(BasicStrategy):
 
         # 首先计算某个平台现在可用的蹲饼器数量.
         for p in self.status_matrix.index:
-            live_num_of_fetcher_p = self.status_matrix.loc[p].sum()   # 例如 = 2. 如果不足1, 直接报警.
-
+            live_num_of_fetcher_p = int(self.status_matrix.loc[p].sum())   # 例如 = 2. 如果不足1, 直接报警.
             if live_num_of_fetcher_p < 1:
                 logger.warning('# of available fetchers on platform: {} is smaller than 1.'.format(p))
                 # 防止报错程序崩溃.
