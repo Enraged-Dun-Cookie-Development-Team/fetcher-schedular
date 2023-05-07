@@ -35,7 +35,12 @@ class ConfigParser(object):
         """
         conf = os.environ
         # CEOBE开头的环境变量是调度器使用的.
-        conf = {c: conf[c] for c in conf if c.startswith('CEOBE')}
+        tmp_conf = {c: conf[c] for c in conf if c.startswith('CEOBE')}
+
+        # 固定为1个下划线，为保证兼容，调整为2个下划线
+        conf = dict()
+        for k in tmp_conf:
+            conf[k.replace('CEOBE_', 'CEOBE__')] = tmp_conf[k]
 
         parsed_conf = dict()
         # 解析所有环境变量
