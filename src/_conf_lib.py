@@ -40,7 +40,7 @@ class ConfigParser(object):
         # 固定为1个下划线，为保证兼容，调整为2个下划线
         conf = dict()
         for k in tmp_conf:
-            conf[k.replace('CEOBE_', 'CEOBE__')] = tmp_conf[k]
+            conf[k.replace('CEOBE_', 'CEOBE__').replace('___', '__')] = tmp_conf[k]
 
         parsed_conf = dict()
         # 解析所有环境变量

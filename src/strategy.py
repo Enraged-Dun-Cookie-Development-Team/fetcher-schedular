@@ -278,6 +278,9 @@ def set_config_in_matrix_datasource(df_given_live_number,
         # 如果不存在则跳过
         if df_given_live_number_fetcher_idx.shape[0] < 1: continue
 
+        print('########### debug:')
+        print(df_given_live_number_fetcher_idx)
+
         # 以下取值都是公用的，取第一行的值即可.
         group_name = df_given_live_number_fetcher_idx.iloc[0]['group_name']
         platform = df_given_live_number_fetcher_idx.iloc[0]['platform']
