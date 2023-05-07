@@ -30,6 +30,17 @@ url = 'http://0.0.0.0:{}/heartbeat'.format(port)
 res = requests.get(url, headers=headers)
 print(res.content)
 
+headers = {'instance_id': 'lwt-03'}
+url = 'http://0.0.0.0:{}/heartbeat'.format(port)
+res = requests.get(url, headers=headers)
+print(res.content)
+
+headers = {'instance_id': 'lwt-04'}
+url = 'http://0.0.0.0:{}/heartbeat'.format(port)
+res = requests.get(url, headers=headers)
+print(res.content)
+
+
 time.sleep(8)
 
 # 3. 报告蹲饼器对某平台异常测试

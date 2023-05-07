@@ -183,7 +183,10 @@ class ManualStrategy(BasicStrategy):
         global_config_df = self.data_pool.fetcher_global_config_df
         global_config_dict = dict()
         for idx in range(global_config_df.shape[0]):
-            global_config_dict[global_config_df.iloc[idx]['key']] = global_config_df.iloc[idx]['value']
+            tmp_val = global_config_df.iloc[idx]['value']
+            if tmp_val.isdigit():
+                tmp_val = int(tmp_val)
+            global_config_dict[global_config_df.iloc[idx]['key']] = tmp_val
 
         del global_config_df
 
