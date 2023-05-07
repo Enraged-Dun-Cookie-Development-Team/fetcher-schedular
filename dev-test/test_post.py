@@ -20,16 +20,16 @@ port = 12345  # 设置端口
 
 # 2. 蹲饼器心跳测试
 
-headers = {'instance_id': 'lwt-01'}
-url = 'http://0.0.0.0:{}/heartbeat'.format(port)
-res = requests.get(url, headers=headers)
-print(res.content)
-
-headers = {'instance_id': 'lwt-02'}
-url = 'http://0.0.0.0:{}/heartbeat'.format(port)
-res = requests.get(url, headers=headers)
-print(res.content)
-
+# headers = {'instance_id': 'lwt-01'}
+# url = 'http://0.0.0.0:{}/heartbeat'.format(port)
+# res = requests.get(url, headers=headers)
+# print(res.content)
+#
+# headers = {'instance_id': 'lwt-02'}
+# url = 'http://0.0.0.0:{}/heartbeat'.format(port)
+# res = requests.get(url, headers=headers)
+# print(res.content)
+#
 headers = {'instance_id': 'lwt-03'}
 url = 'http://0.0.0.0:{}/heartbeat'.format(port)
 res = requests.get(url, headers=headers)
