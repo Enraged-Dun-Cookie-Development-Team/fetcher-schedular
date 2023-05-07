@@ -1,19 +1,24 @@
 import pymysql.cursors
 import redis
 import pandas as pd
-
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+from src._conf_lib import CONFIG
 
 class HandleMysql:
     def __init__(self, conf):
         self.cur = None
         self.conn = None
-        self.data = conf
+        # print(conf)
+        self.data = conf['DB']
 
     def connMyql(self):
         """连接数据库"""
-        host = self.data.get("Host", '127.0.0.1')
-        user = self.data.get("User", 'root')
-        password = self.data.get("Password", '123')
+        host = self.data.get("HOST", '127.0.0.1')
+        user = self.data.get("USER", 'root')
+        password = self.data.get("PASSWORD", '123')
+
         db = self.data.get("DbName", 'ceobe_canteen')
         port = self.data.get("Port", 3306)
         charset = self.data.get("Charset", 'utf8mb4')
@@ -34,9 +39,12 @@ class HandleMysql:
 
 class HandleRedis:
     def __init__(self, conf):
+        conf = conf['REDIS']
         self.port = int(conf.get('port', 6379))
         self.db = int(conf.get('db', 0))
-        self.conn = redis.StrictRedis(host='localhost', port=self.port, db=self.db)
+        self.password = int(conf.get('PASSWORD', 0))
+
+        self.conn = redis.StrictRedis(host='localhost', port=self.port, db=self.db, password=self.password)
 
     def get(self, name):
         return self.conn.get(name)
@@ -45,7 +53,7 @@ class HandleRedis:
         return self.conn.set(name, value)
 
 
-sql_client = HandleMysql(dict())
+sql_client = HandleMysql(CONFIG)
 
 
 def fetch_col_names(table_name_list) -> dict:

@@ -292,9 +292,12 @@ def set_config_in_matrix_datasource(df_given_live_number,
         cur_datasource_config = {
             'name': group_name,
             'type': platform,
-            'interval': interval,
-            'datasource': config_list
+            'datasource': [eval(c.replace('true', 'True').replace('false', 'False')) for c in config_list]
         }
+
+
+        if interval > 0:
+            cur_datasource_config['interval'] = int(interval)
 
         matrix_datasource.loc[platform_identifier][physical_fetcher_idx] = cur_datasource_config
         # 看下一个蹲饼器

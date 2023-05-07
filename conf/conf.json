@@ -1,3 +1,7 @@
 {
-      "log_conf_path": "./conf/log.conf"
+      "log_conf_path": "./conf/log.conf",
+      "db": {
+            "password": "123"
+      },
+      "CEOBE__REDIS__PASSWORD": "123"
 }

@@ -10,6 +10,7 @@ from src.instance_utils import get_new_instance_name
 from src._log_lib import logger
 from src.db import HandleMysql, HandleRedis
 from src.strategy import *
+from src._conf_lib import CONFIG
 
 
 class Maintainer(object):
@@ -24,9 +25,9 @@ class Maintainer(object):
         :param conf: 设置TTL相关参数
         """
         # 需要告警的蹲饼器无心跳的时间(单位：秒)
-        self.WARNING_TIMEOUT = conf.get('WARNING_TIMEOUT', 150)
+        self.WARNING_TIMEOUT = int(conf.get('WARNING_TIMEOUT', 150))
         # 移除蹲饼器的时间(单位: 秒)
-        self.REMOVE_TIMEOUT = conf.get('REMOVE_TIMEOUT', 300)
+        self.REMOVE_TIMEOUT = int(conf.get('REMOVE_TIMEOUT', 300))
 
         # instance-level heart beat 记录
         self._last_updated_time = dict()
@@ -211,7 +212,6 @@ class NpEncoder(json.JSONEncoder):
         return super(NpEncoder, self).default(obj)
 
 
-fetcher_config_pool = FetcherConfigPool(conf=dict())
+fetcher_config_pool = FetcherConfigPool(conf=CONFIG)
 
-# @@@!!! maintainer 启动之后，捋一遍蹲饼器传入，以及更新config的过程.
-maintainer = Maintainer(conf=dict())
+maintainer = Maintainer(conf=CONFIG)

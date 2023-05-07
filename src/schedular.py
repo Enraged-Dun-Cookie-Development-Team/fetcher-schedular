@@ -51,10 +51,11 @@ class HeartBeatSchedular(web.RequestHandler):
     '''
     def get(self):
         """
-        argument: instance_id 蹲饼器id.
+        header: instance_id 蹲饼器id.
         return: 是否需要更新.
         """
-        instance_id = self.get_argument('instance_id', '')
+        head = self.request.headers
+        instance_id = head.get('instance_id', '')
 
         # 不涉及数据库操作，只对内存里已有的活跃蹲饼器进行梳理和记录，扫描时再进行配置的更新.
         new_name = maintainer.update_instance_status(instance_id)
@@ -64,7 +65,7 @@ class HeartBeatSchedular(web.RequestHandler):
 
         output_dict = dict()
         output_dict['code'] = 0
-        output_dict['config'] = need_return_config
+        output_dict['require_update'] = need_return_config
 
         self.write(tornado.escape.json_encode(output_dict))
 
@@ -119,10 +120,11 @@ class FetcherConfigHandler(web.RequestHandler):
     '''
     def get(self):
         """
-        argument: instance_id 蹲饼器id.
+        header: instance_id 蹲饼器id.
         return: latest config. (一定在有必要更新时，才会调用此接口)
         """
-        instance_id = self.get_argument('instance_id', '')
+        head = self.request.headers
+        instance_id = head.get('instance_id', None)
 
         output_dict = dict()
         output_dict['code'] = 0
@@ -192,7 +194,9 @@ class ReportHandler(web.RequestHandler):
         :return:
         '''
         # instance_id 在 header里
-        instance_id = self.get_argument('instance_id', '')
+        head = self.request.headers
+        instance_id = head.get('instance_id', None)
+
         # 其余信息在body里.
         input_data = tornado.escape.json_decode(self.request.body)
         
