@@ -1,7 +1,13 @@
 {
       "log_conf_path": "./conf/log.conf",
-      "db": {
-            "password": "123"
+      "DB": {
+            "USER": "root",
+            "PASSWORD": "123",
+            "HOST": "127.0.0.1"
       },
-      "CEOBE__REDIS__PASSWORD": "123"
+      "REDIS": {
+            "PASSWORD": "123"
+      },
+      "WARNING_TIMEOUT": 150,
+      "REMOVE_TIMEOUT": 300
 }
