@@ -316,7 +316,7 @@ def set_config_in_matrix_datasource(df_given_live_number,
 
         for idx in range(df_tmp.shape[0]):
             group_name = df_tmp.iloc[idx]['group_name']
-            platform = df_tmp.iloc[idx]['platform_x']
+            platform = df_tmp.iloc[idx]['datasource']
             interval = df_tmp.iloc[idx]['interval']
             interval_by_time_range = df_tmp.iloc[idx]['interval_by_time_range']
             cur_config = df_tmp.iloc[idx]['config']
