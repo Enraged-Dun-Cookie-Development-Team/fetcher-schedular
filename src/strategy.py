@@ -5,6 +5,7 @@ import humanize
 import os
 import pandas as pd
 from src._log_lib import logger
+import json
 
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
@@ -155,7 +156,8 @@ class ManualStrategy(BasicStrategy):
 
         latest_config_pool = self.construct_config(matrix_datasource)
         # fetcher_config_pool.config_pool = latest_config_pool
-
+        # print('&' * 20)
+        # print(latest_config_pool)
         return latest_config_pool
 
     def _update_matrix_with_ban_info(self, ban_info):
@@ -218,9 +220,14 @@ class ManualStrategy(BasicStrategy):
             for cur_platform in platforms:
 
                 # print(cur_platform, cur_fetcher)
-                cur_group_config = cur_matrix_datasource.loc[cur_platform, cur_fetcher]
-                if cur_group_config:
-                    tmp_config['groups'].append(cur_group_config)
+                # cur_group_config = cur_matrix_datasource.loc[cur_platform, cur_fetcher]
+                # if cur_group_config:
+                #     tmp_config['groups'].append(cur_group_config)
+
+                # 对一个platform 允许有多个group. 因此cur_matrix_datasource当中取出来的是多组分别的config.
+                cur_groups_config_list = cur_matrix_datasource.loc[cur_platform, cur_fetcher]
+                if cur_groups_config_list:
+                    tmp_config['groups'].extend(cur_groups_config_list)
 
             # platform字段专门放最小间隔.
             tmp_config['platform'] = platform_config_dict
@@ -278,33 +285,54 @@ def set_config_in_matrix_datasource(df_given_live_number,
         # 如果不存在则跳过
         if df_given_live_number_fetcher_idx.shape[0] < 1: continue
 
-        print('########### debug:')
-        print(df_given_live_number_fetcher_idx)
-
-        # 以下取值都是公用的，取第一行的值即可.
-        group_name = df_given_live_number_fetcher_idx.iloc[0]['group_name']
-        platform = df_given_live_number_fetcher_idx.iloc[0]['platform']
-        interval = df_given_live_number_fetcher_idx.iloc[0]['interval']
+        # print('########### debug:')
+        # print(df_given_live_number_fetcher_idx)
 
         # table join 取出匹配的datasource configs
         df_tmp = fetcher_datasource_config_df.merge(df_given_live_number_fetcher_idx,
                                                     right_on='datasource_id',
                                                     left_on='id'
                                                     )
+        # 同一个group_name的放在一起.
+        df_tmp.sort_values('group_name', inplace=True)
 
-        config_list = df_tmp.config.tolist()
+        cur_datasource_config_list_by_group = []
+        # 填表！
+        # TODO: 一个平台，并非只有一个group，需要按平台聚合然后填入.
+        # TODO: 填入 interval_by_time_range.
 
-        cur_datasource_config = {
-            'name': group_name,
-            'type': platform,
-            'datasource': [eval(c.replace('true', 'True').replace('false', 'False')) for c in config_list]
-        }
+        for idx in range(df_tmp.shape[0]):
+            group_name = df_tmp.iloc[idx]['group_name']
+            platform = df_tmp.iloc[idx]['platform_x']
+            interval = df_tmp.iloc[idx]['interval']
+            interval_by_time_range = df_tmp.iloc[idx]['interval_by_time_range']
+            cur_config = df_tmp.iloc[idx]['config']
+
+            # 换组：
+            if idx == 0 or (idx != 0 and group_name != cur_datasource_config_list_by_group[-1]['name']):
+
+                cur_datasource_config = {
+                    'name': group_name,
+                    'type': platform,
+                    'datasource': [json.loads(cur_config)]
+                }
+
+                if interval > 0:
+                    cur_datasource_config['interval'] = int(interval)
+
+                if not str(interval_by_time_range) == '-1':
+                    # print('debug:()')
+                    # print(interval_by_time_range)
+                    cur_datasource_config['interval_by_time_range'] = json.loads(interval_by_time_range)
+
+                cur_datasource_config_list_by_group.append(cur_datasource_config)
+
+            # 不换组
+            else:
+                cur_datasource_config['datasource'].extend([json.loads(cur_config)])
 
 
-        if interval > 0:
-            cur_datasource_config['interval'] = int(interval)
-
-        matrix_datasource.loc[platform_identifier][physical_fetcher_idx] = cur_datasource_config
+        matrix_datasource.loc[platform_identifier][physical_fetcher_idx] = cur_datasource_config_list_by_group
         # 看下一个蹲饼器
         physical_fetcher_idx += 1
     return matrix_datasource

@@ -1,6 +1,10 @@
 import requests
 import socket  # 导入 socket 模块
 import time
+import json
+import pprint
+
+
 s = socket.socket()  # 创建 socket 对象
 host = socket.gethostname()  # 获取本地主机名
 port = 12345  # 设置端口
@@ -30,30 +34,35 @@ port = 12345  # 设置端口
 # res = requests.get(url, headers=headers)
 # print(res.content)
 #
+headers = {'instance_id': 'lwt-02'}
+url = 'http://0.0.0.0:{}/heartbeat'.format(port)
+res = requests.get(url, headers=headers)
+print(res.content)
+
 headers = {'instance_id': 'lwt-03'}
 url = 'http://0.0.0.0:{}/heartbeat'.format(port)
 res = requests.get(url, headers=headers)
 print(res.content)
 
-headers = {'instance_id': 'lwt-04'}
-url = 'http://0.0.0.0:{}/heartbeat'.format(port)
-res = requests.get(url, headers=headers)
-print(res.content)
+# headers = {'instance_id': 'lwt-04'}
+# url = 'http://0.0.0.0:{}/heartbeat'.format(port)
+# res = requests.get(url, headers=headers)
+# print(res.content)
 
 
 time.sleep(8)
 
-# 3. 报告蹲饼器对某平台异常测试
-headers = {'instance_id': 'lwt-01'}
-url = 'http://0.0.0.0:{}/report'.format(port)
-input_data = {'type': 'unavailable_platform', 'value': 'weibo'}
+# # 3. 报告蹲饼器对某平台异常测试
+# headers = {'instance_id': 'lwt-01'}
+# url = 'http://0.0.0.0:{}/report'.format(port)
+# input_data = {'type': 'unavailable_platform', 'value': 'weibo'}
 
-res = requests.post(url, json=input_data, headers=headers)
-print(res.content)
+# res = requests.post(url, json=input_data, headers=headers)
+# print(res.content)
 
 # 4. 蹲饼器获取配置测试
 
 headers = {'instance_id': 'lwt-02'}
 url = 'http://0.0.0.0:{}/fetcher-get-config'.format(port)
 res = requests.get(url, headers=headers)
-print(res.content)
+pprint.pprint(json.loads(res.content))
