@@ -19,9 +19,9 @@ class HandleMysql:
         user = self.data.get("USER", 'root')
         password = self.data.get("PASSWORD", '123')
 
-        db = self.data.get("DbName", 'ceobe_canteen')
-        port = self.data.get("Port", 3306)
-        charset = self.data.get("Charset", 'utf8mb4')
+        db = self.data.get("DB_NAME", 'ceobe_canteen')
+        port = self.data.get("PORT", 3306)
+        charset = self.data.get("CHARSET", 'utf8mb4')
         self.conn = pymysql.connect(host=host, user=user, password=password, db=db, port=int(port), charset=charset)
         self.cur = self.conn.cursor()
 
@@ -40,9 +40,9 @@ class HandleMysql:
 class HandleRedis:
     def __init__(self, conf):
         conf = conf['REDIS']
-        self.port = int(conf.get('port', 6379))
-        self.db = int(conf.get('db', 0))
-        self.password = int(conf.get('PASSWORD', 0))
+        self.port = int(conf.get('PORT', 6379))
+        self.db = int(conf.get('DB', 0))
+        self.password = conf.get('PASSWORD', 0)
 
         self.conn = redis.StrictRedis(host='localhost', port=self.port, db=self.db, password=self.password)
 

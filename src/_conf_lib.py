@@ -5,13 +5,28 @@ import traceback
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
+# 将json的所有key转换为大写
+def upper_json(json_info):
+    if isinstance(json_info,dict):
+        for key in list(json_info.keys()):
+            if key.isupper():
+                upper_json(json_info[key])
+            else:
+                key_upper = key.upper()
+                json_info[key_upper] = json_info[key]
+                del json_info[key]
+                upper_json(json_info[key_upper])
+
+    elif isinstance(json_info,list):
+        for item in json_info:
+            upper_json(item)
 
 class ConfigParser(object):
 
     def __init__(self):
         try:
             conf = self.load_json_config()
-            # print(conf)
+            print(conf)
         except:
             traceback.print_exc()
             conf = self.load_environ_config()
@@ -25,8 +40,10 @@ class ConfigParser(object):
         """
         with open('./conf/conf.json', 'r') as f:
             conf = json.load(f)
+            upper_json(conf)
 
         return conf
+
 
     def load_environ_config(self):
         """

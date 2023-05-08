@@ -1,0 +1,14 @@
+{
+      "log_conf_path": "./conf/log.conf",
+      "db": {
+            "user": "root",
+            "password": "123456",
+            "host": "localhost",
+            "port": 3306
+      },
+      "redis": {
+            "password": "123456"
+      },
+      "warning_timeout": 150,
+      "remove_timeout": 300
+}
