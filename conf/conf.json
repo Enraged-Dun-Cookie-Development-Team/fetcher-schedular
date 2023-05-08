@@ -8,6 +8,6 @@
       "REDIS": {
             "PASSWORD": "123"
       },
-      "WARNING_TIMEOUT": 150,
+      "WARNING_TIMEOUT": 10,
       "REMOVE_TIMEOUT": 300
 }

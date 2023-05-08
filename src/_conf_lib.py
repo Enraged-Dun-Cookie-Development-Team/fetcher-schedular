@@ -13,7 +13,7 @@ class ConfigParser(object):
             conf = self.load_json_config()
             # print(conf)
         except:
-            # traceback.print_exc()
+            traceback.print_exc()
             conf = self.load_environ_config()
 
         self.CONFIG = conf
@@ -23,7 +23,7 @@ class ConfigParser(object):
         读取配置文件作为config.
         :return:
         """
-        with open('../conf/aconf.json', 'r') as f:
+        with open('./conf/conf.json', 'r') as f:
             conf = json.load(f)
 
         return conf
