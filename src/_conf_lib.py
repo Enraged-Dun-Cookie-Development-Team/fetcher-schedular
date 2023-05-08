@@ -44,7 +44,6 @@ class ConfigParser(object):
 
         return conf
 
-
     def load_environ_config(self):
         """
         读取环境变量作为config.

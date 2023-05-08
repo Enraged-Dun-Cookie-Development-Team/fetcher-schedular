@@ -131,7 +131,8 @@ class FetcherConfigHandler(web.RequestHandler):
         latest_config = maintainer.get_latest_fetcher_config(instance_id)  # 是在心跳扫描时计算的。这里只是取出结果.
 
         output_dict['config'] = latest_config
-
+        # 更新不需要获得新config.
+        maintainer.need_update[instance_id] = False
         print(latest_config)
         self.write(json.dumps(output_dict, cls=NpEncoder))
 

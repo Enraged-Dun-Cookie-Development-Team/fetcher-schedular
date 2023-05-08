@@ -24,10 +24,10 @@ port = 12345  # 设置端口
 
 # 2. 蹲饼器心跳测试
 
-# headers = {'instance_id': 'lwt-01'}
-# url = 'http://0.0.0.0:{}/heartbeat'.format(port)
-# res = requests.get(url, headers=headers)
-# print(res.content)
+headers = {'instance_id': 'lwt-01'}
+url = 'http://0.0.0.0:{}/heartbeat'.format(port)
+res = requests.get(url, headers=headers)
+print(res.content)
 #
 # headers = {'instance_id': 'lwt-02'}
 # url = 'http://0.0.0.0:{}/heartbeat'.format(port)
@@ -44,13 +44,12 @@ url = 'http://0.0.0.0:{}/heartbeat'.format(port)
 res = requests.get(url, headers=headers)
 print(res.content)
 
-# headers = {'instance_id': 'lwt-04'}
-# url = 'http://0.0.0.0:{}/heartbeat'.format(port)
-# res = requests.get(url, headers=headers)
-# print(res.content)
+headers = {'instance_id': 'lwt-04'}
+url = 'http://0.0.0.0:{}/heartbeat'.format(port)
+res = requests.get(url, headers=headers)
+print(res.content)
 
-
-time.sleep(8)
+time.sleep(7)
 
 # # 3. 报告蹲饼器对某平台异常测试
 # headers = {'instance_id': 'lwt-01'}
@@ -62,7 +61,7 @@ time.sleep(8)
 
 # 4. 蹲饼器获取配置测试
 
-headers = {'instance_id': 'lwt-02'}
+headers = {'instance_id': 'lwt-03'}
 url = 'http://0.0.0.0:{}/fetcher-get-config'.format(port)
 res = requests.get(url, headers=headers)
 pprint.pprint(json.loads(res.content))

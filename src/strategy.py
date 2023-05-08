@@ -128,18 +128,25 @@ class ManualStrategy(BasicStrategy):
         # 首先计算某个平台现在可用的蹲饼器数量.
         for p in self.status_matrix.index:
             live_num_of_fetcher_p = int(self.status_matrix.loc[p].sum())   # 例如 = 2. 如果不足1, 直接报警.
+            # print(live_num_of_fetcher_p)
             if live_num_of_fetcher_p < 1:
                 logger.warning('# of available fetchers on platform: {} is smaller than 1.'.format(p))
                 # 防止报错程序崩溃.
                 # live_num_of_fetcher_p = 1
 
             # 然后去 fetcher_config_df 找 live_number 和 platform都能对上的
+            # 如果设置的最大蹲饼器数量比实际蹲饼器数量还少，那只使用已设置了的蹲饼器数量的最大值。
+            max_set_live_number_of_platform = int(fetcher_config_df[
+                fetcher_config_df.platform == p
+            ]['live_number'].max())
+
             df_tmp = fetcher_config_df[
-                np.logical_and(fetcher_config_df.live_number == live_num_of_fetcher_p,
+                np.logical_and(fetcher_config_df.live_number == min(max_set_live_number_of_platform,
+                                                                    live_num_of_fetcher_p),
                                fetcher_config_df.platform == p)
             ].copy()  # 注意copy出来，避免修改原始数据.
-
-
+            print('#' * 20)
+            print(df_tmp)
             # print('#' * 30)
             # print(p)
             # print(df_tmp)
@@ -267,6 +274,12 @@ def set_config_in_matrix_datasource(df_given_live_number,
     '''
 
     physical_fetcher_idx = 0
+
+    print('debug:存活蹲饼器数量大于配置数量时')
+    print(live_num_of_fetcher_p)
+
+    # print(status_matrix)
+
     if live_num_of_fetcher_p < 1:
         logger.warning('skip platform:{} config updating due to unavailable fetchers'.format(platform_identifier))
         return matrix_datasource
