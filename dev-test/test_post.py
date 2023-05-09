@@ -61,7 +61,7 @@ time.sleep(7)
 
 # 4. 蹲饼器获取配置测试
 
-headers = {'instance_id': 'lwt-03'}
+headers = {'instance_id': 'lwt-02'}
 url = 'http://0.0.0.0:{}/fetcher-get-config'.format(port)
 res = requests.get(url, headers=headers)
 pprint.pprint(json.loads(res.content))

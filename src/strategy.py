@@ -14,6 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from src.db import (select_fetcher_datasource_config, select_fetcher_config,
                     select_fetcher_global_config, select_fetcher_platform_config)
 
+
 class DataPool:
     def __init__(self):
         self.get_latest_data()

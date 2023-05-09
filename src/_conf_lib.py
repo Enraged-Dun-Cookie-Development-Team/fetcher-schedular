@@ -21,6 +21,7 @@ def upper_json(json_info):
         for item in json_info:
             upper_json(item)
 
+
 class ConfigParser(object):
 
     def __init__(self):

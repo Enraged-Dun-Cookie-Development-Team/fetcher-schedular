@@ -9,6 +9,10 @@
       "redis": {
             "password": "123456"
       },
+      "schedular": {
+            "host": "127.0.0.1",
+            "port": 12345
+      },
       "warning_timeout": 150,
       "remove_timeout": 300
 }

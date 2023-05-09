@@ -12,6 +12,7 @@ humanize.i18n.activate("zh_CN")
 # print(sys.path)
 from src._data_lib import maintainer, fetcher_config_pool, NpEncoder
 from src._log_lib import logger
+from src._conf_lib import CONFIG
 
 
 class RegisterHandler(web.RequestHandler):
@@ -343,6 +344,6 @@ if __name__ == '__main__':
         (r'/schedular-update-config', SchedularConfigHandler),
 
     ])
-    application.listen(12345)
+    application.listen(CONFIG['SCHEDULAR']['PORT'], address=CONFIG['SCHEDULAR']['HOST'])
     ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()  # start scheduler 每隔2s执行一次f2s
     ioloop.IOLoop.instance().start()
