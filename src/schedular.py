@@ -228,9 +228,7 @@ class SchedularConfigHandler(web.RequestHandler):
         :return:
         """
         try:
-            input_data = tornado.escape.json_decode(self.request.body)
-            logger.info(input_data)
-            platform_to_update = input_data.get('platform', '')
+            platform_to_update = self.get_argument('platform', '')
 
             if not platform_to_update:
                 self.write({'status': 'no platform selected to update', 'code': 500})
