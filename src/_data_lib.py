@@ -36,6 +36,9 @@ class Maintainer(object):
         # 字典形式的失败列表，可以用 get_flat_failed_platform_instance_list 方法得到展开的失败记录.
         self._failed_platform_by_instance = defaultdict(list)
 
+        # 蹲饼器被平台ban掉的倒计时记录.
+        self.failed_platform_by_instance_countdown = defaultdict(dict)
+
         # if need_update[instance_id], 更新instance_id对应的蹲饼器的config.
         self.need_update = dict()
 
@@ -93,6 +96,9 @@ class Maintainer(object):
         self._failed_platform_by_instance[instance_id].append(cur_failed_platform)
         self._failed_platform_by_instance[instance_id] = list(set(
                                         self._failed_platform_by_instance[instance_id]))
+
+        # 加入失败蹲饼器的倒计时
+        self.failed_platform_by_instance_countdown[instance_id][cur_failed_platform] = 600
 
         return self._failed_platform_by_instance[instance_id]
 

@@ -14,6 +14,7 @@ from src._data_lib import maintainer, fetcher_config_pool, NpEncoder
 from src._log_lib import logger
 from src._conf_lib import CONFIG
 
+MAX_INT = 16777216
 
 class RegisterHandler(web.RequestHandler):
     '''
@@ -327,6 +328,28 @@ class HealthMonitor(object):
             print(1)
             fetcher_config_pool.fetcher_config_update(maintainer)
             self.UPDATE_CONFIG_FLAG = False  # 复位
+
+        # 蹲饼器蹲失败的平台情况check:
+        # 遍历所有失败的蹲饼器 * 平台, 进行倒计时更新。倒计时小于0则将它从失败平台列表里剔除。
+        for instance_id in maintainer.failed_platform_by_instance_countdown:
+            for cur_failed_platform in maintainer.failed_platform_by_instance_countdown[instance_id]:
+                maintainer.failed_platform_by_instance_countdown[instance_id][cur_failed_platform] -= 5
+                if maintainer.failed_platform_by_instance_countdown[instance_id][cur_failed_platform] < 0:
+                    maintainer._failed_platform_by_instance[instance_id].remove(cur_failed_platform)
+                    maintainer.failed_platform_by_instance_countdown[instance_id][cur_failed_platform] = MAX_INT
+        # 已恢复的就从 _failed_platform_by_instance当中去除.
+
+        remove_list = []
+        for instance_id in maintainer._failed_platform_by_instance:
+            if not maintainer._failed_platform_by_instance[instance_id]:
+                remove_list.append(instance_id)
+
+        for instance_id in remove_list:
+            maintainer._failed_platform_by_instance.pop(instance_id)
+
+        logger.info('曾经失败的蹲饼器恢复倒计时状态:大于600代表正常;小于等于600代表等待恢复中')
+        logger.info(str(maintainer.failed_platform_by_instance_countdown))
+        logger.info(str(maintainer._failed_platform_by_instance))
 
 
 health_monitor = HealthMonitor()

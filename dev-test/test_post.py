@@ -51,13 +51,13 @@ print(res.content)
 
 time.sleep(7)
 
-# # 3. 报告蹲饼器对某平台异常测试
-# headers = {'instance_id': 'lwt-01'}
-# url = 'http://0.0.0.0:{}/report'.format(port)
-# input_data = {'type': 'unavailable_platform', 'value': 'weibo'}
+# 3. 报告蹲饼器对某平台异常测试
+headers = {'instance_id': 'lwt-02'}
+url = 'http://0.0.0.0:{}/report'.format(port)
+input_data = {'type': 'unavailable_platform', 'value': 'weibo'}
 
-# res = requests.post(url, json=input_data, headers=headers)
-# print(res.content)
+res = requests.post(url, json=input_data, headers=headers)
+print(res.content)
 
 # 4. 蹲饼器获取配置测试
 
