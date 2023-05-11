@@ -192,7 +192,9 @@ class FetcherConfigPool(object):
         :return: (无需返回值). 最新蹲饼器配置
         """
         self.config_pool = manual_strategy.update(maintainer)
-
+        # 告知蹲饼器需要更新.
+        for instance_id in maintainer.need_update:
+            maintainer.need_update[instance_id] = True
         # return latest_config
 
     def __getitem__(self, fetcher_instance_id):
