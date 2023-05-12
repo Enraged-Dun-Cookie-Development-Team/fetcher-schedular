@@ -27,7 +27,7 @@ class ConfigParser(object):
     def __init__(self):
         try:
             conf = self.load_json_config()
-            print(conf)
+            # print(conf)
         except:
             traceback.print_exc()
             conf = self.load_environ_config()
