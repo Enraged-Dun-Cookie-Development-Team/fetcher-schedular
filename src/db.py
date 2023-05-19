@@ -40,11 +40,12 @@ class HandleMysql:
 class HandleRedis:
     def __init__(self, conf):
         conf = conf['REDIS']
+        self.host = conf.get('HOST', 'localhost')
         self.port = int(conf.get('PORT', 6379))
         self.db = int(conf.get('DB', 0))
         self.password = conf.get('PASSWORD', 0)
 
-        self.conn = redis.StrictRedis(host='localhost', port=self.port, db=self.db, password=self.password)
+        self.conn = redis.StrictRedis(host=self.host, port=self.port, db=self.db, password=self.password)
 
     def get(self, name):
         return self.conn.get(name)
