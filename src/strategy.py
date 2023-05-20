@@ -33,7 +33,7 @@ class BasicStrategy:
     策略基类
     """
     def __init__(self):
-        self.get_latest_data()
+        # self.get_latest_data()
         self.status_matrix = None
 
     def get_latest_data(self):
