@@ -6,6 +6,12 @@ import sys
 sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 from src._conf_lib import CONFIG
 
+from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import MetaData, inspect, create_engine
+from sqlalchemy import Table
+
+
 class HandleMysql:
     def __init__(self, conf):
         self.cur = None
@@ -58,10 +64,16 @@ sql_client = HandleMysql(CONFIG)
 
 
 def fetch_col_names(table_name_list) -> dict:
+    
     output_dict = dict()
+    engine = create_engine('mysql+pymysql://root:123@localhost:3306/ceobe_canteen?charset=utf8')
+
+    # 将数据库的表反射出来
+    metadata = MetaData(bind=engine)
+
     for table_name in table_name_list:
-        df_tmp = pd.DataFrame(sql_client.executeSql('show columns from {};'.format(table_name)))
-        output_dict[table_name] = df_tmp[0].tolist()
+        table = Table(table_name, metadata, autoload=True, autoload_with=engine)
+        output_dict[table_name] = list(table.columns.keys())
 
     return output_dict
 
