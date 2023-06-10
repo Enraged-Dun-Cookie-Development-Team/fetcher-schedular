@@ -345,7 +345,7 @@ class HealthMonitor(object):
         for instance_id in remove_list:
             maintainer._failed_platform_by_instance.pop(instance_id)
 
-        logger.info('曾经失败的蹲饼器恢复倒计时状态:大于600代表正常;小于等于600代表等待恢复中')
+        # logger.info('曾经失败的蹲饼器恢复倒计时状态:大于600代表正常;小于等于600代表等待恢复中')
         logger.info(str(maintainer.failed_platform_by_instance_countdown))
         logger.info(str(maintainer._failed_platform_by_instance))
 

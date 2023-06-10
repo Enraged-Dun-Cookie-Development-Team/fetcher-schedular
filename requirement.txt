@@ -5,6 +5,7 @@ humanize==4.4.0
 
 redis==4.4.0
 PyMySQL==1.0.2
+SQLAlchemy==1.4.22
 
 tqdm
 xlrd

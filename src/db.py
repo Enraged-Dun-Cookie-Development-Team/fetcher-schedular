@@ -17,8 +17,9 @@ class HandleMysql:
         self.cur = None
         self.conn = None
         # print(conf)
-        self.data = conf['DB']
-
+        self.data = conf.get('DB',dict())
+        self.connMyql()
+        
     def connMyql(self):
         """连接数据库"""
         host = self.data.get("HOST", '127.0.0.1')
@@ -28,19 +29,27 @@ class HandleMysql:
         db = self.data.get("DB_NAME", 'ceobe_canteen')
         port = self.data.get("PORT", 3306)
         charset = self.data.get("CHARSET", 'utf8mb4')
-        self.conn = pymysql.connect(host=host, user=user, password=password, db=db, port=int(port), charset=charset)
-        self.cur = self.conn.cursor()
 
-    def executeSql(self, sql):
-        """执行sql"""
-        self.connMyql()
-        self.cur.execute(sql)
-        return self.cur.fetchall()
+        self.engine = create_engine('mysql+pymysql://{}:{}@{}:{}/{}?charset={}'.format(
+                    user, password, host, port, db, charset))
+        
+        self.metadata = MetaData(bind=self.engine)
 
-    def closeMysql(self):
-        """关闭连接"""
-        self.cur.close()
-        self.conn.close()
+        
+    def sessMyql(self):
+        Session = sessionmaker(self.engine)
+        db_session = Session()
+        
+        return db_session
+    
+    def queryMyql(self, table_name=''):
+        '''
+        封装查询步骤
+        '''
+        db_session = self.sessMyql()
+        table = Table(table_name, self.metadata, autoload=True, autoload_with=self.engine)
+        db_query = db_session.query(table)
+        return db_query, table
 
 
 class HandleRedis:
@@ -66,13 +75,9 @@ sql_client = HandleMysql(CONFIG)
 def fetch_col_names(table_name_list) -> dict:
     
     output_dict = dict()
-    engine = create_engine('mysql+pymysql://root:123@localhost:3306/ceobe_canteen?charset=utf8')
-
-    # 将数据库的表反射出来
-    metadata = MetaData(bind=engine)
-
+    # 反射获取数据表meta信息.
     for table_name in table_name_list:
-        table = Table(table_name, metadata, autoload=True, autoload_with=engine)
+        _, table = sql_client.queryMyql(table_name)
         output_dict[table_name] = list(table.columns.keys())
 
     return output_dict
@@ -85,42 +90,53 @@ table_name_list = ['fetcher_datasource_config',
 table_col_names = fetch_col_names(table_name_list)
 
 
-def select_fetcher_datasource_config(platform='') -> pd.DataFrame:
-    if platform:
-        df = pd.DataFrame(
-            sql_client.executeSql('select * from fetcher_datasource_config where platform="{}";'.format(platform)))
-    else:
-        df = pd.DataFrame(sql_client.executeSql('select * from fetcher_datasource_config;'.format(platform)))
-
-    df.columns = table_col_names['fetcher_datasource_config']
-    return df
-
-
 def select_fetcher_config(platform='') -> pd.DataFrame:
+    table_name = 'fetcher_config'
+    db_query, table = sql_client.queryMyql(table_name)
+    
     if platform:
-        df = pd.DataFrame(sql_client.executeSql('select * from fetcher_config where platform="{}";'.format(platform)))
+        content = db_query.filter(table.columns.platform == platform).all()
     else:
-        df = pd.DataFrame(sql_client.executeSql('select * from fetcher_config;'.format(platform)))
-
-    df.columns = table_col_names['fetcher_config']
+        content = db_query.all()
+        
+    df = pd.DataFrame(content, columns=table_col_names[table_name]) 
     return df
 
 
 def select_fetcher_global_config() -> pd.DataFrame:
-    df = pd.DataFrame(sql_client.executeSql('select * from fetcher_global_config;'))
-    df.columns = table_col_names['fetcher_global_config']
-
+    
+    table_name = 'fetcher_global_config'
+    db_query, table = sql_client.queryMyql(table_name)
+    content = db_query.all() 
+    df = pd.DataFrame(content, columns=table_col_names[table_name]) 
+    
     return df
 
 
 def select_fetcher_platform_config(platform='') -> pd.DataFrame:
+    
+    table_name = 'fetcher_platform_config'
+    db_query, table = sql_client.queryMyql(table_name)
+    
     if platform:
-        df = pd.DataFrame(
-            sql_client.executeSql('select * from fetcher_platform_config where platform="{}";'.format(platform)))
+        content = db_query.filter(table.columns.platform == platform).all()
     else:
-        df = pd.DataFrame(sql_client.executeSql('select * from fetcher_platform_config;'.format(platform)))
+        content = db_query.all()
+        
+    df = pd.DataFrame(content, columns=table_col_names[table_name]) 
+    return df
 
-    df.columns = table_col_names['fetcher_platform_config']
+def select_fetcher_datasource_config(platform='') -> pd.DataFrame:
+    
+    table_name = 'fetcher_datasource_config'
+    db_query, table = sql_client.queryMyql(table_name)
+    
+    if platform:
+        content = db_query.filter(table.columns.platform == platform).all()
+    else:
+        content = db_query.all()
+        
+    df = pd.DataFrame(content, columns=table_col_names[table_name])  
     return df
 
 
