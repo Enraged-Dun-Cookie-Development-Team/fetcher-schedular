@@ -125,6 +125,7 @@ class ManualStrategy(BasicStrategy):
         # 首先构建一个存储datasource级别config的matrix
         matrix_datasource = self.initial_matrix(rows=platform_identifiers, columns=fetcher_name_list, default_value=[])
         # print(matrix_datasource)
+        undefined_platform_list = []
 
         # 首先计算某个平台现在可用的蹲饼器数量.
         for p in self.status_matrix.index:
@@ -137,9 +138,19 @@ class ManualStrategy(BasicStrategy):
 
             # 然后去 fetcher_config_df 找 live_number 和 platform都能对上的
             # 如果设置的最大蹲饼器数量比实际蹲饼器数量还少，那只使用已设置了的蹲饼器数量的最大值。
-            max_set_live_number_of_platform = int(fetcher_config_df[
-                fetcher_config_df.platform == p
-            ]['live_number'].max())
+            
+            # 取出当前p对应的平台所有可能的蹲饼配置。
+            df_tmp_cur_fetcher = fetcher_config_df[fetcher_config_df.platform == p]
+            
+            if df_tmp_cur_fetcher.shape[0]:
+
+                max_set_live_number_of_platform = int(
+                    df_tmp_cur_fetcher['live_number'].max()
+                    )
+            # 如果尚未配置这个蹲饼器的具体配置，则把它从 matrix_datasource 当中删掉。
+            else:
+                undefined_platform_list.append(p)
+                continue
 
             df_tmp = fetcher_config_df[
                 np.logical_and(fetcher_config_df.live_number == min(max_set_live_number_of_platform,
@@ -162,6 +173,9 @@ class ManualStrategy(BasicStrategy):
             print('matrix_datasource 处理后:')
             print(matrix_datasource)
 
+        # 把当前未配置的平台从matrix_datasource当中去掉。
+        matrix_datasource = matrix_datasource[~matrix_datasource.index.isin(undefined_platform_list)]
+        
         latest_config_pool = self.construct_config(matrix_datasource)
         # fetcher_config_pool.config_pool = latest_config_pool
         # print('&' * 20)
