@@ -49,7 +49,7 @@ url = 'http://0.0.0.0:{}/heartbeat'.format(port)
 res = requests.get(url, headers=headers)
 print(res.content)
 
-time.sleep(7)
+time.sleep(3)
 
 # 3. 报告蹲饼器对某平台异常测试
 headers = {'instance_id': 'lwt-02'}
@@ -63,5 +63,12 @@ print(res.content)
 
 headers = {'instance_id': 'lwt-02'}
 url = 'http://0.0.0.0:{}/fetcher-get-config'.format(port)
+res = requests.get(url, headers=headers)
+pprint.pprint(json.loads(res.content))
+
+# 5. mook蹲饼器获取配置测试
+print('测试standalone蹲饼器获取配置：')
+headers = {}
+url = 'http://0.0.0.0:{}/standalone-fetcher-get-config'.format(port)
 res = requests.get(url, headers=headers)
 pprint.pprint(json.loads(res.content))

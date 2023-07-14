@@ -73,6 +73,17 @@ class ManualStrategy(BasicStrategy):
         super(ManualStrategy, self).__init__()
 
     def update(self, maintainer=None):
+        '''
+        更新操作分为2步:
+        1. 更新真实蹲饼器的数据.
+        2. 更新 MOOK 蹲饼器的数据.
+        '''
+        latest_config_pool = self._update(maintainer)
+        mook_config_pool = self._update(maintainer=maintainer, is_mook=True)
+        latest_config_pool['MOOK'] = mook_config_pool['MOOK']
+        return latest_config_pool
+
+    def _update(self, maintainer=None, is_mook=False):
         """
         实时状态从 maintainer 中获取.
 
@@ -101,6 +112,10 @@ class ManualStrategy(BasicStrategy):
         # fetcher_name_list = ['SilverAsh', 'Saria']
         fetcher_name_list = maintainer.alive_instance_id_list
 
+        # 模拟平台只有一个蹲饼器.
+        if is_mook:
+            fetcher_name_list = ['MOOK']
+
         platform_identifiers = self.get_platform_identifiers()
 
         # 初始化状态矩阵
@@ -109,6 +124,11 @@ class ManualStrategy(BasicStrategy):
         # 平台被ban信息
         # ban_info = {'SilverAsh': [], 'Saria': ['weibo', 'netease-cloud-music']}
         ban_info = maintainer._failed_platform_by_instance
+        
+        # mook蹲饼器无ban信息.
+        if is_mook:
+            ban_info = {'MOOK': []}
+
 
         # 使用平台被ban信息更新状态矩阵
         self._update_matrix_with_ban_info(ban_info)
