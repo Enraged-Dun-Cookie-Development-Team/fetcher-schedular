@@ -153,6 +153,16 @@ class Maintainer(object):
 
         return cur_config
 
+    def get_mook_fetcher_config(self, instance_id):
+        """
+        根据instance_id, 获取最新的蹲饼器配置.
+        :param instance_id 要进行配置的蹲饼器id.
+        :return: 新config.
+        """
+        
+        cur_config = fetcher_config_pool['MOOK']
+
+        return cur_config
 
 class FetcherConfigPool(object):
     """

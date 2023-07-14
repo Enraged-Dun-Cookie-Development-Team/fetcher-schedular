@@ -182,6 +182,33 @@ class FetcherConfigHandler(web.RequestHandler):
         """
 
 
+class MookFetcherConfigHandler(web.RequestHandler):
+    '''
+    蹲饼器获取最新配置.
+    施工中.
+    '''
+    def get(self):
+        """
+        header: instance_id 蹲饼器id.
+        return: latest config. (一定在有必要更新时，才会调用此接口)
+        """
+        head = self.request.headers
+
+        # 默认mook fetcher instance id = 'MOOK'
+        # instance_id = head.get('instance_id', None)
+
+        output_dict = dict()
+        output_dict['code'] = 0
+        latest_config = maintainer.get_latest_fetcher_config('MOOK')  # 是在心跳扫描时计算的。这里只是取出结果.
+
+        output_dict['config'] = latest_config
+        print(latest_config)
+        self.write(json.dumps(output_dict, cls=NpEncoder))
+
+    def post(self, *args, **kwargs):
+        pass
+
+
 class ReportHandler(web.RequestHandler):
     '''
     记录蹲饼器传入的异常平台信息.
@@ -363,8 +390,10 @@ if __name__ == '__main__':
         (r'/fetcher-get-config', FetcherConfigHandler),
         # 后台通知蹲饼器更新config.
         (r'/schedular-update-config', SchedularConfigHandler),
-
+        # 为mook(standalone)蹲饼器提供最新config.
+        (r'/standalone-fetcher-get-config', MookFetcherConfigHandler)
     ])
+
     application.listen(CONFIG['SCHEDULAR']['PORT'], address=CONFIG['SCHEDULAR']['HOST'])
     ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()  # start scheduler 每隔2s执行一次f2s
     ioloop.IOLoop.instance().start()
