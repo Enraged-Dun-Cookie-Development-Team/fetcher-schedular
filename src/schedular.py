@@ -6,6 +6,7 @@ import time
 import json
 import humanize
 import traceback
+import copy
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 humanize.i18n.activate("zh_CN")
@@ -131,6 +132,9 @@ class FetcherConfigHandler(web.RequestHandler):
         output_dict = dict()
         output_dict['code'] = 0
         latest_config = maintainer.get_latest_fetcher_config(instance_id)  # 是在心跳扫描时计算的。这里只是取出结果.
+        latest_config = copy.deepcopy(latest_config)
+        for cur_group in latest_config['groups']:
+            cur_group.pop('datasource_id')
 
         output_dict['config'] = latest_config
         # 更新不需要获得新config.
@@ -204,8 +208,12 @@ class MookFetcherConfigHandler(web.RequestHandler):
             output_dict['code'] = 0
             latest_config = maintainer.get_latest_fetcher_config('MOOK')  # 是在心跳扫描时计算的。这里只是取出结果.
 
+            latest_config = copy.deepcopy(latest_config)
             # 用 datasource_id_list 筛选所需datasource_id的config.
             latest_config['groups'] = list([g for g in latest_config['groups'] if g['datasource_id'] in datasource_id_list])
+
+            for cur_group in latest_config['groups']:
+                cur_group.pop('datasource_id')
 
             output_dict['config'] = latest_config
             print(latest_config)
