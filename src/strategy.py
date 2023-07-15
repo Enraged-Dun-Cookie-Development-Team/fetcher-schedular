@@ -355,13 +355,14 @@ def set_config_in_matrix_datasource(df_given_live_number,
             interval = df_tmp.iloc[idx]['interval']
             interval_by_time_range = df_tmp.iloc[idx]['interval_by_time_range']
             cur_config = df_tmp.iloc[idx]['config']
-
+            datasource_id = df_tmp.iloc[idx]['datasource_id']
             # 换组：
             if idx == 0 or (idx != 0 and group_name != cur_datasource_config_list_by_group[-1]['name']):
 
                 cur_datasource_config = {
                     'name': group_name,
                     'type': platform,
+                    'datasource_id': datasource_id,
                     'datasource': [json.loads(cur_config)]
                 }
 

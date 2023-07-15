@@ -68,7 +68,8 @@ pprint.pprint(json.loads(res.content))
 
 # 5. mook蹲饼器获取配置测试
 print('测试standalone蹲饼器获取配置：')
-headers = {}
+
 url = 'http://0.0.0.0:{}/standalone-fetcher-get-config'.format(port)
-res = requests.get(url, headers=headers)
+input_data = {'datasource_id_list': [28, 25]}
+res = requests.post(url, json=input_data)
 pprint.pprint(json.loads(res.content))

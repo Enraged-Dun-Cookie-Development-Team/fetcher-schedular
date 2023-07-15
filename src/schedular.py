@@ -184,29 +184,37 @@ class FetcherConfigHandler(web.RequestHandler):
 
 class MookFetcherConfigHandler(web.RequestHandler):
     '''
-    蹲饼器获取最新配置.
-    施工中.
+    standalone蹲饼器获取最新配置.
     '''
     def get(self):
+        pass
+
+    def post(self, *args, **kwargs):
         """
         header: instance_id 蹲饼器id.
         return: latest config. (一定在有必要更新时，才会调用此接口)
         """
-        head = self.request.headers
+        try:
+            # 默认mook fetcher instance id = 'MOOK'
+            input_data = tornado.escape.json_decode(self.request.body)
 
-        # 默认mook fetcher instance id = 'MOOK'
-        # instance_id = head.get('instance_id', None)
+            datasource_id_list = input_data.get('datasource_id_list', [])
+            datasource_id_list = [int(i) for i in datasource_id_list]
+            output_dict = dict()
+            output_dict['code'] = 0
+            latest_config = maintainer.get_latest_fetcher_config('MOOK')  # 是在心跳扫描时计算的。这里只是取出结果.
 
-        output_dict = dict()
-        output_dict['code'] = 0
-        latest_config = maintainer.get_latest_fetcher_config('MOOK')  # 是在心跳扫描时计算的。这里只是取出结果.
+            # 用 datasource_id_list 筛选所需datasource_id的config.
+            latest_config['groups'] = list([g for g in latest_config['groups'] if g['datasource_id'] in datasource_id_list])
 
-        output_dict['config'] = latest_config
-        print(latest_config)
-        self.write(json.dumps(output_dict, cls=NpEncoder))
-
-    def post(self, *args, **kwargs):
-        pass
+            output_dict['config'] = latest_config
+            print(latest_config)
+            self.write(json.dumps(output_dict, cls=NpEncoder))
+        except:
+            output_dict = dict()
+            output_dict['code'] = 500
+            output_dict['config'] = {}
+            self.write(json.dumps(output_dict, cls=NpEncoder))
 
 
 class ReportHandler(web.RequestHandler):
