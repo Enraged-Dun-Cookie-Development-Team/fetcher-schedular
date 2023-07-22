@@ -344,7 +344,7 @@ class HealthMonitor(object):
                 maintainer.alive_instance_id_list = cur_alive_list
 
         # 活动的蹲饼器list发生了变化
-        if set(cur_alive_list) != set(self.last_alive_fetcher_list):
+        if set(cur_alive_list) != set(self.last_alive_fetcher_list) and maintainer.has_valid_config:
             self.UPDATE_CONFIG_FLAG = True
             # 下次心跳请求时，给每个蹲饼器传回新的config.
             # 如果一个蹲饼器挂了之后又好了，它的id会变化. 所以不冲突.
@@ -356,7 +356,7 @@ class HealthMonitor(object):
             maintainer.redis.set('cookie:fetcher:config:live:number', len(maintainer.need_update))
 
         # 蹲饼器蹲失败的平台发生了变化.
-        elif set(failed_flat_list) != set(self.last_failed_flat_list):
+        elif set(failed_flat_list) != set(self.last_failed_flat_list) and maintainer.has_valid_config:
             self.UPDATE_CONFIG_FLAG = True
 
             for instance_id in cur_alive_list:

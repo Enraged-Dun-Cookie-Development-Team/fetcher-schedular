@@ -46,6 +46,8 @@ class Maintainer(object):
 
         self._init_conn_redis(conf)
 
+        # 当前是否产出了有效的配置。没有的话就禁止蹲饼器更新.
+        self.has_valid_config = False
         logger.info('调度器Maintainer初始化完成')
 
     def _init_conn_redis(self, conf):
@@ -201,10 +203,19 @@ class FetcherConfigPool(object):
 
         :return: (无需返回值). 最新蹲饼器配置
         """
-        self.config_pool = manual_strategy.update(maintainer)
-        # 告知蹲饼器需要更新.
-        for instance_id in maintainer.need_update:
-            maintainer.need_update[instance_id] = True
+        is_valid, cur_config_pool = manual_strategy.update(maintainer)
+        
+        # 仅当当前配置认为有效时, 更新配置。
+        if is_valid:
+
+            self.config_pool = cur_config_pool
+            # 告知蹲饼器需要更新.
+            for instance_id in maintainer.need_update:
+                maintainer.need_update[instance_id] = True
+        else:
+            # 如果当前配置无效，则不更新，仍然使用老配置或不配置。
+            for instance_id in maintainer.need_update:
+                maintainer.need_update[instance_id] = False
         # return latest_config
 
     def __getitem__(self, fetcher_instance_id):

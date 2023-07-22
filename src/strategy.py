@@ -78,10 +78,17 @@ class ManualStrategy(BasicStrategy):
         1. 更新真实蹲饼器的数据.
         2. 更新 MOOK 蹲饼器的数据.
         '''
-        latest_config_pool = self._update(maintainer)
-        mook_config_pool = self._update(maintainer=maintainer, is_mook=True)
-        latest_config_pool['MOOK'] = mook_config_pool['MOOK']
-        return latest_config_pool
+        is_valid, latest_config_pool = self._update(maintainer)
+        
+        # maintainer 更新状态：是否存在有效的配置.
+        maintainer.has_valid_config = is_valid
+
+        # 仅当当前返回了有效的更新时，加入mook。
+        if is_valid:
+            # mook 用专门的is_mook=True 参数来控制.
+            mook_config_pool = self._update(maintainer=maintainer, is_mook=True)
+            latest_config_pool['MOOK'] = mook_config_pool['MOOK']
+        return is_valid, latest_config_pool
 
     def _update(self, maintainer=None, is_mook=False):
         """
@@ -105,6 +112,11 @@ class ManualStrategy(BasicStrategy):
         fetcher_datasource_config_df = self.data_pool.fetcher_datasource_config_df
         fetcher_global_config_df = self.data_pool.fetcher_global_config_df
         fetcher_platform_config_df = self.data_pool.fetcher_platform_config_df
+
+        # 如果配置无效，则is_valid输出=False. 防止蹲饼器拿到无效配置或出现错误.
+        if fetcher_datasource_config_df.shape[0] * fetcher_platform_config_df.shape[0] *\
+            fetcher_config_df.shape[0] == 0:
+            return False, dict()
 
         #################### status matrix update ##############################
 
@@ -200,7 +212,7 @@ class ManualStrategy(BasicStrategy):
         # fetcher_config_pool.config_pool = latest_config_pool
         # print('&' * 20)
         # print(latest_config_pool)
-        return latest_config_pool
+        return True, latest_config_pool
 
     def _update_matrix_with_ban_info(self, ban_info):
         """
