@@ -49,6 +49,7 @@ class HandleMysql:
         db_session = self.sessMyql()
         table = Table(table_name, self.metadata, autoload=True, autoload_with=self.engine)
         db_query = db_session.query(table)
+        db_session.close()
         return db_query, table
 
 
