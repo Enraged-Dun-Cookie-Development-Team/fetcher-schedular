@@ -16,7 +16,7 @@ from src._log_lib import logger
 from src._conf_lib import CONFIG
 
 MAX_INT = 16777216
-is_init = True
+
 
 class RegisterHandler(web.RequestHandler):
     '''
@@ -300,6 +300,7 @@ class HealthMonitor(object):
         self.last_failed_flat_list = []
 
         self.UPDATE_CONFIG_FLAG = False
+        self.is_init = True
 
     def health_scan(self):
         '''
@@ -309,9 +310,9 @@ class HealthMonitor(object):
         :return:
         '''
 
-        if is_init:
+        if self.is_init:
             fetcher_config_pool.fetcher_config_update(maintainer)
-            is_init = False
+            self.is_init = False
 
         now = time.time()
         # 定期扫描检测各个蹲饼器健康状态
