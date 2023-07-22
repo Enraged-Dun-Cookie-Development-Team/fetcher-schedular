@@ -16,6 +16,7 @@ from src._log_lib import logger
 from src._conf_lib import CONFIG
 
 MAX_INT = 16777216
+is_init = True
 
 class RegisterHandler(web.RequestHandler):
     '''
@@ -133,8 +134,10 @@ class FetcherConfigHandler(web.RequestHandler):
         output_dict['code'] = 0
         latest_config = maintainer.get_latest_fetcher_config(instance_id)  # 是在心跳扫描时计算的。这里只是取出结果.
         latest_config = copy.deepcopy(latest_config)
-        for cur_group in latest_config['groups']:
-            cur_group.pop('datasource_id')
+        
+        if latest_config:
+            for cur_group in latest_config['groups']:
+                cur_group.pop('datasource_id')
 
         output_dict['config'] = latest_config
         # 更新不需要获得新config.
@@ -305,6 +308,11 @@ class HealthMonitor(object):
         3. 实例管理：如果有蹲饼器超过一定时长还没有响应，认为它已经重启了。可以从maintainer当中删除了.
         :return:
         '''
+
+        if is_init:
+            fetcher_config_pool.fetcher_config_update(maintainer)
+            is_init = False
+
         now = time.time()
         # 定期扫描检测各个蹲饼器健康状态
         # 开始扫描
