@@ -86,8 +86,9 @@ class ManualStrategy(BasicStrategy):
         # 仅当当前返回了有效的更新时，加入mook。
         if is_valid:
             # mook 用专门的is_mook=True 参数来控制.
-            mook_config_pool = self._update(maintainer=maintainer, is_mook=True)
-            latest_config_pool['MOOK'] = mook_config_pool['MOOK']
+            _, mook_config_pool = self._update(maintainer=maintainer, is_mook=True)
+            if not maintainer.is_init:
+                latest_config_pool['MOOK'] = mook_config_pool['MOOK']
         return is_valid, latest_config_pool
 
     def _update(self, maintainer=None, is_mook=False):

@@ -48,6 +48,8 @@ class Maintainer(object):
 
         # 当前是否产出了有效的配置。没有的话就禁止蹲饼器更新.
         self.has_valid_config = True
+
+        self.is_init = True
         logger.info('调度器Maintainer初始化完成')
 
     def _init_conn_redis(self, conf):

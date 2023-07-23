@@ -300,7 +300,6 @@ class HealthMonitor(object):
         self.last_failed_flat_list = []
 
         self.UPDATE_CONFIG_FLAG = False
-        self.is_init = True
 
     def health_scan(self):
         '''
@@ -310,9 +309,10 @@ class HealthMonitor(object):
         :return:
         '''
 
-        if self.is_init:
+        if maintainer.is_init:
             fetcher_config_pool.fetcher_config_update(maintainer)
-            self.is_init = False
+            print('maintainer初始化:', maintainer.has_valid_config)
+            maintainer.is_init = False
 
         now = time.time()
         # 定期扫描检测各个蹲饼器健康状态
