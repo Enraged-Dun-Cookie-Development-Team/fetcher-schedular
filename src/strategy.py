@@ -190,8 +190,8 @@ class ManualStrategy(BasicStrategy):
                                                                     live_num_of_fetcher_p),
                                fetcher_config_df.platform == p)
             ].copy()  # 注意copy出来，避免修改原始数据.
-            print('#' * 20)
-            print(df_tmp)
+            # print('#' * 20)
+            # print(df_tmp)
             # print('#' * 30)
             # print(p)
             # print(df_tmp)
@@ -202,17 +202,17 @@ class ManualStrategy(BasicStrategy):
                                                                 self.status_matrix,
                                                                 matrix_datasource
                                                                 )
-            print('^' * 20)
-            print('matrix_datasource 处理后:')
-            print(matrix_datasource)
+            # print('^' * 20)
+            # print('matrix_datasource 处理后:')
+            # print(matrix_datasource)
 
         # 把当前未配置的平台从matrix_datasource当中去掉。
         matrix_datasource = matrix_datasource[~matrix_datasource.index.isin(undefined_platform_list)]
         
         latest_config_pool = self.construct_config(matrix_datasource)
         # fetcher_config_pool.config_pool = latest_config_pool
-        # print('&' * 20)
-        # print(latest_config_pool)
+        print('&' * 20)
+        print(latest_config_pool)
         return True, latest_config_pool
 
     def _update_matrix_with_ban_info(self, ban_info):
@@ -323,8 +323,8 @@ def set_config_in_matrix_datasource(df_given_live_number,
 
     physical_fetcher_idx = 0
 
-    print('debug:存活蹲饼器数量大于配置数量时')
-    print(live_num_of_fetcher_p)
+    # print('debug:存活蹲饼器数量大于配置数量时')
+    # print(live_num_of_fetcher_p)
 
     # print(status_matrix)
 
