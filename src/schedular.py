@@ -129,7 +129,8 @@ class FetcherConfigHandler(web.RequestHandler):
         """
         head = self.request.headers
         instance_id = head.get('instance_id', None)
-
+        logger.info('蹲饼器获取配置:{}'.format(instance_id))
+        
         output_dict = dict()
         output_dict['code'] = 0
         latest_config = maintainer.get_latest_fetcher_config(instance_id)  # 是在心跳扫描时计算的。这里只是取出结果.
@@ -204,9 +205,11 @@ class MookFetcherConfigHandler(web.RequestHandler):
         try:
             # 默认mook fetcher instance id = 'MOOK'
             input_data = tornado.escape.json_decode(self.request.body)
-
+            
             datasource_id_list = input_data.get('datasource_id_list', [])
             datasource_id_list = [int(i) for i in datasource_id_list]
+            logger.info('MOOK蹲饼器获取配置, 数据源列表:{}'.format(str(datasource_id_list)))
+
             output_dict = dict()
             output_dict['code'] = 0
             latest_config = maintainer.get_latest_fetcher_config('MOOK')  # 是在心跳扫描时计算的。这里只是取出结果.
@@ -219,7 +222,8 @@ class MookFetcherConfigHandler(web.RequestHandler):
                 cur_group.pop('datasource_id')
 
             output_dict['config'] = latest_config
-            print('MOOK蹲饼器获取配置': latest_config)
+            logger.info('返回给MOOK蹲饼器配置:{}'.format(latest_config))
+
             self.write(json.dumps(output_dict, cls=NpEncoder))
         except:
             output_dict = dict()
@@ -249,7 +253,7 @@ class ReportHandler(web.RequestHandler):
         # 其余信息在body里.
         input_data = tornado.escape.json_decode(self.request.body)
         
-        logger.info(instance_id)        
+        logger.info('异常平台信息, 蹲饼器: {}'.format(instance_id))
         logger.info(input_data)
         
         # 更新异常平台信息.
