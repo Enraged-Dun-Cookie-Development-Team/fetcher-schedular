@@ -129,7 +129,8 @@ class FetcherConfigHandler(web.RequestHandler):
         """
         head = self.request.headers
         instance_id = head.get('instance_id', None)
-
+        logger.info('蹲饼器获取配置:{}'.format(instance_id))
+        
         output_dict = dict()
         output_dict['code'] = 0
         latest_config = maintainer.get_latest_fetcher_config(instance_id)  # 是在心跳扫描时计算的。这里只是取出结果.
@@ -142,7 +143,7 @@ class FetcherConfigHandler(web.RequestHandler):
         output_dict['config'] = latest_config
         # 更新不需要获得新config.
         maintainer.need_update[instance_id] = False
-        print('蹲饼器id:{}的配置:'.format(instance_id), latest_config)
+        logger.info('蹲饼器id:{}的配置: '.format(instance_id) + str(latest_config))
         self.write(json.dumps(output_dict, cls=NpEncoder))
 
     def post(self, *args, **kwargs):
@@ -204,9 +205,11 @@ class MookFetcherConfigHandler(web.RequestHandler):
         try:
             # 默认mook fetcher instance id = 'MOOK'
             input_data = tornado.escape.json_decode(self.request.body)
-
+            
             datasource_id_list = input_data.get('datasource_id_list', [])
             datasource_id_list = [int(i) for i in datasource_id_list]
+            logger.info('MOOK蹲饼器获取配置, 数据源列表:{}'.format(str(datasource_id_list)))
+
             output_dict = dict()
             output_dict['code'] = 0
             latest_config = maintainer.get_latest_fetcher_config('MOOK')  # 是在心跳扫描时计算的。这里只是取出结果.
@@ -219,7 +222,8 @@ class MookFetcherConfigHandler(web.RequestHandler):
                 cur_group.pop('datasource_id')
 
             output_dict['config'] = latest_config
-            print(latest_config)
+            logger.info('返回给MOOK蹲饼器配置:{}'.format(latest_config))
+
             self.write(json.dumps(output_dict, cls=NpEncoder))
         except:
             output_dict = dict()
@@ -249,7 +253,7 @@ class ReportHandler(web.RequestHandler):
         # 其余信息在body里.
         input_data = tornado.escape.json_decode(self.request.body)
         
-        logger.info(instance_id)        
+        logger.info('异常平台信息, 蹲饼器: {}'.format(instance_id))
         logger.info(input_data)
         
         # 更新异常平台信息.
@@ -316,8 +320,8 @@ class HealthMonitor(object):
 
         now = time.time()
         # 定期扫描检测各个蹲饼器健康状态
-        # 开始扫描
-        logger.info('[Start a new scan]')
+        # 开始扫描；没有状态变化则不记录。
+        # logger.info('[Start a new scan]')
 
         # 通过对 上一次scan时 活跃的蹲饼器 和 这一次scan活跃的蹲饼器 进行对比，判断蹲饼器级别是否需要更新
         last_updated_instance_list = list(maintainer._last_updated_time.keys())
@@ -349,7 +353,7 @@ class HealthMonitor(object):
 
             else:
                 cur_alive_list.append(instance_id)
-                logger.info('[ALIVE]: {}'.format(instance_id))
+                # logger.info('[ALIVE]: {}'.format(instance_id))
                 maintainer.alive_instance_id_list = cur_alive_list
 
         # 活动的蹲饼器list发生了变化
@@ -375,7 +379,7 @@ class HealthMonitor(object):
         # maintainer更新最新的config的操作在这里
         if self.UPDATE_CONFIG_FLAG:
             # 如需更新，则执行对全部配置的更新.
-            print(1)
+            # print(1)
             fetcher_config_pool.fetcher_config_update(maintainer)
             self.UPDATE_CONFIG_FLAG = False  # 复位
 
@@ -398,8 +402,8 @@ class HealthMonitor(object):
             maintainer._failed_platform_by_instance.pop(instance_id)
 
         # logger.info('曾经失败的蹲饼器恢复倒计时状态:大于600代表正常;小于等于600代表等待恢复中')
-        logger.info(str(maintainer.failed_platform_by_instance_countdown))
-        logger.info(str(maintainer._failed_platform_by_instance))
+        # logger.info(str(maintainer.failed_platform_by_instance_countdown))
+        # logger.info(str(maintainer._failed_platform_by_instance))
 
 
 health_monitor = HealthMonitor()
