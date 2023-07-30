@@ -142,7 +142,7 @@ class FetcherConfigHandler(web.RequestHandler):
         output_dict['config'] = latest_config
         # 更新不需要获得新config.
         maintainer.need_update[instance_id] = False
-        print('蹲饼器id:{}的配置:'.format(instance_id), latest_config)
+        logger.info('蹲饼器id:{}的配置: '.format(instance_id) + str(latest_config))
         self.write(json.dumps(output_dict, cls=NpEncoder))
 
     def post(self, *args, **kwargs):
