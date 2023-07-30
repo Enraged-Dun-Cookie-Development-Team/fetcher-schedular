@@ -37,6 +37,7 @@ class HandleMysql:
 
         
     def sessMyql(self):
+        self.connMyql()
         Session = sessionmaker(self.engine)
         db_session = Session()
         
