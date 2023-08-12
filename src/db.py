@@ -42,15 +42,23 @@ class HandleMysql:
         db_session = Session()
         
         return db_session
-    
+
     def queryMyql(self, table_name=''):
         '''
-        封装查询步骤
+        封装查询步骤, 每次重新启动session; 如果失败最多重试3次.
         '''
-        db_session = self.sessMyql()
-        table = Table(table_name, self.metadata, autoload=True, autoload_with=self.engine)
-        db_query = db_session.query(table)
-        db_session.close()
+        max_retry = 3
+        success_mark = False
+        while max_retry > 0 and not success_mark:
+            try:
+                db_session = self.sessMyql()
+                table = Table(table_name, self.metadata, autoload=True, autoload_with=self.engine)
+                db_query = db_session.query(table)
+                db_session.close()
+                success_mark = True
+            except:
+                max_retry -= 1
+
         return db_query, table
 
 
