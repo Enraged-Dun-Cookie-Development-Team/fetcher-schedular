@@ -7,6 +7,7 @@ import json
 import humanize
 import traceback
 import copy
+import logging
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 humanize.i18n.activate("zh_CN")
@@ -422,7 +423,11 @@ if __name__ == '__main__':
         # 为mook(standalone)蹲饼器提供最新config.
         (r'/standalone-fetcher-get-config', MookFetcherConfigHandler)
     ])
+    # 禁用默认log.
+    # logging.getLogger('tornado.application').setLevel(logging.CRITICAL)
+    logging.getLogger('tornado.access').setLevel(logging.CRITICAL)
 
     application.listen(CONFIG['SCHEDULAR']['PORT'], address=CONFIG['SCHEDULAR']['HOST'])
+
     ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()  # start scheduler 每隔2s执行一次f2s
     ioloop.IOLoop.instance().start()
