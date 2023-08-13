@@ -67,6 +67,12 @@ res = requests.get(url, headers=headers)
 print('测试蹲饼器获取配置：')
 pprint.pprint(json.loads(res.content))
 
+headers = {'instance_id': 'lwt-03'}
+url = 'http://0.0.0.0:{}/fetcher-get-config'.format(port)
+res = requests.get(url, headers=headers)
+print('测试蹲饼器获取配置：')
+pprint.pprint(json.loads(res.content))
+
 # 5. mook蹲饼器获取配置测试
 print('测试standalone蹲饼器获取配置：')
 
