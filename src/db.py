@@ -8,8 +8,22 @@ from src._conf_lib import CONFIG
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import MetaData, inspect, create_engine
+from sqlalchemy import MetaData, inspect, create_engine, event
 from sqlalchemy import Table
+from sqlalchemy.exc import DisconnectionError
+
+
+def checkout_listener(dbapi_con, con_record, con_proxy):
+    try:
+        try:
+            dbapi_con.ping(False)
+        except TypeError:
+            dbapi_con.ping()
+    except dbapi_con.OperationalError as exc:
+        if exc.args[0] in (2006, 2013, 2014, 2045, 2055):
+            raise DisconnectionError()
+        else:
+            raise
 
 
 class HandleMysql:
@@ -19,7 +33,7 @@ class HandleMysql:
         # print(conf)
         self.data = conf.get('DB',dict())
         self.connMyql()
-        
+
     def connMyql(self):
         """连接数据库"""
         host = self.data.get("HOST", '127.0.0.1')
@@ -31,13 +45,12 @@ class HandleMysql:
         charset = self.data.get("CHARSET", 'utf8mb4')
 
         self.engine = create_engine('mysql+pymysql://{}:{}@{}:{}/{}?charset={}'.format(
-                    user, password, host, port, db, charset))
-        
+                    user, password, host, port, db, charset), pool_size=100, pool_recycle=600, pool_pre_ping=True)
+
         self.metadata = MetaData(bind=self.engine)
 
         
     def sessMyql(self):
-        self.connMyql()
         Session = sessionmaker(self.engine)
         db_session = Session()
         
@@ -80,6 +93,7 @@ class HandleRedis:
 
 
 sql_client = HandleMysql(CONFIG)
+event.listen(sql_client.engine, 'checkout', checkout_listener)
 
 
 def fetch_col_names(table_name_list) -> dict:
