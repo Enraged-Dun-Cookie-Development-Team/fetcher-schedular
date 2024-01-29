@@ -358,17 +358,20 @@ class HealthMonitor(object):
                 maintainer.alive_instance_id_list = cur_alive_list
 
         # 活动的蹲饼器list发生了变化
-        if set(cur_alive_list) != set(self.last_alive_fetcher_list) and maintainer.has_valid_config:
-            self.UPDATE_CONFIG_FLAG = True
-            # 下次心跳请求时，给每个蹲饼器传回新的config.
-            # 如果一个蹲饼器挂了之后又好了，它的id会变化. 所以不冲突.
-            for instance_id in cur_alive_list:
-                maintainer.need_update[instance_id] = True
-            self.last_alive_fetcher_list = cur_alive_list
+        if set(cur_alive_list) != set(self.last_alive_fetcher_list):
+            if maintainer.has_valid_config:
+                self.UPDATE_CONFIG_FLAG = True
+                # 下次心跳请求时，给每个蹲饼器传回新的config.
+                # 如果一个蹲饼器挂了之后又好了，它的id会变化. 所以不冲突.
+                for instance_id in cur_alive_list:
+                    maintainer.need_update[instance_id] = True
+                self.last_alive_fetcher_list = cur_alive_list
 
             # 更新理论存活上限. need_update无论True还是False，都认为未来可能存活；被删除了则认为不会存活了。
-            redis_update_status = maintainer.redis.set('cookie:fetcher:config:live:number', len(maintainer.need_update))
-            logger.warning('[REDIS UPDATE] cookie:fetcher:config:live:number {}, {}'.format(redis_update_status, len(maintainer.need_update)))
+            max_live_number = maintainer.redis.get('cookie:fetcher:config:live:number')
+            if len(maintainer.need_update) > max_live_number:
+                redis_update_status = maintainer.redis.set('cookie:fetcher:config:live:number', len(maintainer.need_update))
+                logger.warning('[REDIS UPDATE] cookie:fetcher:config:live:number {}, {}'.format(redis_update_status, len(maintainer.need_update)))
 
         # 蹲饼器蹲失败的平台发生了变化.
         elif set(failed_flat_list) != set(self.last_failed_flat_list) and maintainer.has_valid_config:
