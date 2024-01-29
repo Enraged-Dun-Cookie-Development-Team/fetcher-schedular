@@ -368,7 +368,7 @@ class HealthMonitor(object):
                 self.last_alive_fetcher_list = cur_alive_list
 
             # 更新理论存活上限. need_update无论True还是False，都认为未来可能存活；被删除了则认为不会存活了。
-            max_live_number = maintainer.redis.get('cookie:fetcher:config:live:number', 0)
+            max_live_number = maintainer.redis.get('cookie:fetcher:config:live:number') or 0
             if len(maintainer.need_update) > max_live_number:
                 redis_update_status = maintainer.redis.set('cookie:fetcher:config:live:number', len(maintainer.need_update))
                 logger.warning('[REDIS UPDATE] cookie:fetcher:config:live:number {}, {}'.format(redis_update_status, len(maintainer.need_update)))
