@@ -367,7 +367,8 @@ class HealthMonitor(object):
             self.last_alive_fetcher_list = cur_alive_list
 
             # 更新理论存活上限. need_update无论True还是False，都认为未来可能存活；被删除了则认为不会存活了。
-            maintainer.redis.set('cookie:fetcher:config:live:number', len(maintainer.need_update))
+            redis_update_status = maintainer.redis.set('cookie:fetcher:config:live:number', len(maintainer.need_update))
+            logger.warning('[REDIS UPDATE] cookie:fetcher:config:live:number {}, {}'.format(redis_update_status, len(maintainer.need_update)))
 
         # 蹲饼器蹲失败的平台发生了变化.
         elif set(failed_flat_list) != set(self.last_failed_flat_list) and maintainer.has_valid_config:
