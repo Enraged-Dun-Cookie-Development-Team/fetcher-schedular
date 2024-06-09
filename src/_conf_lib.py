@@ -32,14 +32,17 @@ class ConfigParser(object):
             traceback.print_exc()
             conf = self.load_environ_config()
 
-        self.CONFIG = conf
+        auto_sche_conf =self.load_json_config(config_name='./conf/auto_sche.conf')
 
-    def load_json_config(self):
+        self.CONFIG = conf
+        self.AUTO_SCHE_CONFIG = auto_sche_conf
+
+    def load_json_config(self, config_name='./conf/conf.json'):
         """
         读取配置文件作为config.
         :return:
         """
-        with open('./conf/conf.json', 'r') as f:
+        with open(config_name, 'r') as f:
             conf = json.load(f)
             upper_json(conf)
 
@@ -82,4 +85,6 @@ class ConfigParser(object):
 
 conf_parser = ConfigParser()
 CONFIG = conf_parser.CONFIG
-print(CONFIG)
+AUTO_SCHE_CONFIG = conf_parser.AUTO_SCHE_CONFIG
+
+# print(CONFIG)
