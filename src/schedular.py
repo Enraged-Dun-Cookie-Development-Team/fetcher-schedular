@@ -121,7 +121,7 @@ class HeartBeatSchedular(web.RequestHandler):
 class FetcherConfigHandler(web.RequestHandler):
     '''
     蹲饼器获取最新配置.
-    施工中.
+
     '''
     def get(self):
         """
