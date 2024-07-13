@@ -32,7 +32,13 @@ class ConfigParser(object):
             traceback.print_exc()
             conf = self.load_environ_config()
 
+        # 自动蹲饼的config构造：
+        # 1. 读取 datasource -> encoded feature的映射表
+        datasource_encoded = 
+        # 2. 读取其他配置
         auto_sche_conf =self.load_json_config(config_name='./conf/auto_sche.conf')
+        # 3. 配置合并
+        auto_sche_conf['datasource'] = 
 
         self.CONFIG = conf
         self.AUTO_SCHE_CONFIG = auto_sche_conf

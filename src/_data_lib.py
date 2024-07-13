@@ -1,8 +1,11 @@
-
 import time
 import os
 import sys
 import traceback
+import datetime
+import json
+import numpy as np
+
 from collections import defaultdict
 sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
@@ -11,6 +14,8 @@ from src._log_lib import logger
 from src.db import HandleMysql, HandleRedis
 from src.strategy import *
 from src._conf_lib import CONFIG
+from src._http_lib import PostManager
+from src.auto_sche.model_loader import MODEL_DICT
 
 
 class Maintainer(object):
@@ -168,6 +173,7 @@ class Maintainer(object):
 
         return cur_config
 
+
 class FetcherConfigPool(object):
     """
     维护每个蹲饼器的蹲饼策略.
@@ -224,10 +230,6 @@ class FetcherConfigPool(object):
         return self.config_pool.get(fetcher_instance_id, {})
 
 
-import json
-import numpy as np
-
-
 class NpEncoder(json.JSONEncoder):
     """
     numpy 和 pandas 库的数据都是numpy对象，不能直接json序列化. 转化成python原生数据格式.
@@ -243,6 +245,59 @@ class NpEncoder(json.JSONEncoder):
         return super(NpEncoder, self).default(obj)
 
 
+class AutoMaintainer(object):
+    '''
+    多个蹲饼器的信息管理器。
+    用于创建与更新蹲饼器的蹲饼策略.
+    '''
+    def __init__(self):
+        self.pm = PostManager(max_workers=5)
+        
+        # 存储每天模型预测的结果
+        self._model_predicted_result_pool = None
+
+    def activate_send_request(self):
+        """
+        1. 获取当前时间所需蹲饼的平台 + 获取当前所需蹲饼平台对应的蹲饼器
+        2. 发送请求.
+        """
+
+        post_data_list = self._find_pending_request_fetcher()
+
+        self._send_request(post_data_list)
+
+
+    def daily_model_predict(self):
+        pass
+        
+
+    def _set_model_predicted_result_pool(self, predicted_result):
+        self._model_predicted_result_pool = predicted_result
+
+
+    def _find_pending_request_fetcher(self, current_time):
+        """
+        获取当前时间所需蹲饼的平台 + 获取当前所需蹲饼平台对应的蹲饼器
+        """
+        current_time = datetime.datetime.now()
+        # 找到当前时间点~前5秒内的全部结果
+        # 然后统计所有的需要蹲饼的datasource.
+        # 其中拿到的矩阵的形状是[time_num, datasource_num] 并且datasource_num长度为datasource总数 + 1
+        # 根据datasource_num索引确定具体是哪个数据源要蹲饼。
+        # 从总的config里抽取这个数据源的配置. 发送请求.
+
+
+    def _send_request(self, data):
+        
+        for d in data:
+            
+            cur_url = d['url']
+            d.pop('url')
+
+            self.pm.add_data(cur_url, d)
+
+
 fetcher_config_pool = FetcherConfigPool(conf=CONFIG)
 
 maintainer = Maintainer(conf=CONFIG)
+auto_maintainer = AutoMaintainer()

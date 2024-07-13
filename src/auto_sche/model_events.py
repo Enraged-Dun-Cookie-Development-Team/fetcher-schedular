@@ -24,7 +24,7 @@ class FeatureProcesser:
         # 需要处理：12个feature
         X_list = []
         feature_num = 12
-        datasource_num = len(set(df_2['datasource']))
+        datasource_num = len(AUTO_SCHE_CONFIG['datasource'])
         time_points = self.feature_of_time()
 
         for t in tqdm(time_points):
@@ -87,3 +87,27 @@ class FeatureProcesser:
         weekday = date.strftime("%A")  # %A表示完整的星期名称（如Monday）
 
         return weekday
+
+
+# 以及用模型进行预测
+# 记录开始执行的时间
+start_time = datetime.now()
+
+
+def model_predict():
+    global predictions, start_time
+    print(f"Model prediction triggered at {datetime.now()}")
+
+    # 先按每秒1个点写demo.
+    predictions = [False] * 86400
+    predictions[10] = True
+    predictions[20] = True
+    # 重新记录程序开始执行的时间
+    start_time = datetime.now()
+    
+
+
+
+
+# 用于每日形成待预测的特征
+feat_processer = FeatureProcesser()

@@ -1,5 +1,7 @@
 import tornado
 from tornado import web, ioloop
+from apscheduler.schedulers.background import BackgroundScheduler  
+
 import os
 import sys
 import time
@@ -12,9 +14,10 @@ import logging
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 humanize.i18n.activate("zh_CN")
 # print(sys.path)
-from src._data_lib import maintainer, fetcher_config_pool, NpEncoder
+from src._data_lib import maintainer, auto_maintainer, fetcher_config_pool, NpEncoder
 from src._log_lib import logger
-from src._conf_lib import CONFIG
+from src._conf_lib import CONFIG, AUTO_SCHE_CONFIG
+
 
 MAX_INT = 16777216
 
@@ -294,6 +297,19 @@ class SchedularConfigHandler(web.RequestHandler):
             self.write({'status': 'fail', 'code': 500})
 
 
+class FetcherRequestSender(object):
+    def __init__(self):
+        pass
+
+    def send_request(self):
+        """
+        索引当前需要发送的信息；
+        向指定的蹲饼器发送。
+        具体实现在auto_maintainer.activate_send_command 方法中。
+        """
+        auto_maintainer.activate_send_request()
+
+
 class HealthMonitor(object):
     """
     定时任务以确定健康的蹲饼器数量，从而调整config.
@@ -412,6 +428,7 @@ class HealthMonitor(object):
 
 
 health_monitor = HealthMonitor()
+fetcher_request_sender = FetcherRequestSender()
 
 if __name__ == '__main__':
     application = web.Application([
@@ -433,5 +450,17 @@ if __name__ == '__main__':
 
     application.listen(CONFIG['SCHEDULAR']['PORT'], address=CONFIG['SCHEDULAR']['HOST'])
 
-    ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()  # start scheduler 每隔2s执行一次f2s
+    # 每日预测任务
+    daily_scheduler = BackgroundScheduler()  
+    daily_scheduler.add_job(my_scheduled_job, 'cron', hour=4)  
+    daily_scheduler.start()  
+
+    # 蹲饼器健康情况监控
+    ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()
+    
+    # 向蹲饼器发送蹲饼指令
+    ioloop.PeriodicCallback(fetcher_request_sender.send_request, 5000).start()
+
     ioloop.IOLoop.instance().start()
+
+
