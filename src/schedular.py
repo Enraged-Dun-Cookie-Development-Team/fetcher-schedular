@@ -452,7 +452,7 @@ if __name__ == '__main__':
 
     # 每日预测任务
     daily_scheduler = BackgroundScheduler()  
-    daily_scheduler.add_job(my_scheduled_job, 'cron', hour=4)  
+    daily_scheduler.add_job(auto_maintainer., 'cron', hour=4)  
     daily_scheduler.start()  
 
     # 蹲饼器健康情况监控
