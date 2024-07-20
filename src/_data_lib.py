@@ -16,7 +16,7 @@ from src.strategy import *
 from src._conf_lib import CONFIG
 from src._http_lib import PostManager
 from src.auto_sche.model_loader import MODEL_DICT
-
+from src.auto_sche.model_events import feat_processer
 
 class Maintainer(object):
     '''
@@ -252,9 +252,17 @@ class AutoMaintainer(object):
     '''
     def __init__(self):
         self.pm = PostManager(max_workers=5)
-        
+        self.model = MODEL_DICT['decision_tree_model']
+
         # 存储每天模型预测的结果
         self._model_predicted_result_pool = None
+        
+        # 后面改成配置
+        self.interval_seconds = 1
+        # 后面改成配置
+        self.datasource_num = 24
+
+
 
     def activate_send_request(self):
         """
@@ -268,24 +276,75 @@ class AutoMaintainer(object):
 
 
     def daily_model_predict(self):
-        pass
+        """
+        每日更新模型全量预测结果
+        """
+        X_list = feat_processer.feature_combine()
+
+
+        predicted_result = self.model.predict(X_list)
+
+        self._set_model_predicted_result_pool(X_list, predicted_result)
         
 
-    def _set_model_predicted_result_pool(self, predicted_result):
+    def _set_model_predicted_result_pool(self, X_list, predicted_result):
+        """
+        把预测结果和原始输入，整合成方便查找蹲饼时间和对应数据源的形式。
+        """
+        X_list['predicted_y'] = predicted_result
+
+        X_list.columns = ['datasource', '1', '2', '3', '4', 'year', 'month', 'day', 'hour', 'minute', 'second', '11', 'predicted_y']
+        
+        X_list['datetime'] = pd.to_datetime(X_list[['year', 'month', 'day', 'hour', 'minute', 'second']])
+
+        # 使用.dt.strftime()将日期时间对象格式化为字符串
+        X_list['datetime_str'] = X_list['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+
         self._model_predicted_result_pool = predicted_result
 
 
-    def _find_pending_request_fetcher(self, current_time):
-        """
-        获取当前时间所需蹲饼的平台 + 获取当前所需蹲饼平台对应的蹲饼器
-        """
-        current_time = datetime.datetime.now()
-        # 找到当前时间点~前5秒内的全部结果
-        # 然后统计所有的需要蹲饼的datasource.
-        # 其中拿到的矩阵的形状是[time_num, datasource_num] 并且datasource_num长度为datasource总数 + 1
-        # 根据datasource_num索引确定具体是哪个数据源要蹲饼。
-        # 从总的config里抽取这个数据源的配置. 发送请求.
+    def get_pending_datasources(pred_df, end_time=None, time_window_seconds=None):
+        
+        # 设置需要判断的时间段的右端点
+        if not end_time:
+            end_time = datetime.datetime.now()
+        else:
+            date_format = '%Y-%m-%d %H:%M:%S'  
+      
+            end_time = datetime.datetime.strptime(end_time, date_format)
+        
+        # 从4点过去，经过了多少个小时
+        cur_hour_offset = max((end_time.hour + 24 - 4) % 24, 1)
 
+        X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * interval_seconds * datasource_num * 3600:
+                    (cur_hour_offset + 1) * self.interval_seconds * self.datasource_num * 3600
+                    ].reset_index(drop=True)
+
+
+
+        # 设置窗口长度
+        if not time_window_seconds:
+            time_window_seconds = 5
+
+        start_time = end_time - datetime.timedelta(seconds=time_window_seconds)
+
+        start_time = start_time.strftime('%Y-%m-%d %H:%M:%S')
+        end_time = end_time.strftime('%Y-%m-%d %H:%M:%S')
+        
+        # print(start_time)
+
+        target_df = pred_df[
+            np.logical_and(pred_df['datetime_str'] >= start_time, 
+                          pred_df['datetime_str'] <= end_time)]
+        
+        pending_datsource_stats_df = target_df.groupby('datasource')['predicted_y'].sum()
+        pending_datsource_stats_df = pending_datsource_stats_df[pending_datsource_stats_df > 0].reset_index()
+        
+        pending_datasource_idx = pending_datasource_stats_df['datasource'].tolist()
+        pending_datasource_names = [pending_datasource_idx[c] for c in pending_datasource_idx]
+
+        return pending_datasource_names
 
     def _send_request(self, data):
         

@@ -12,6 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from src.auto_sche.model_loader import MODEL_DICT
 from src._conf_lib import AUTO_SCHE_CONFIG
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 
@@ -38,6 +39,24 @@ class FeatureProcesser:
             cur_feature[:, 11] = MODEL_DICT['weekday_encoder'].transform([self._convert_date(*t[:3])])
 
             X_list.append(cur_feature)
+        
+        # 组织成dataframe用于模型输入.
+        X_list = pd.DataFrame(np.concatenate(X_list))
+        
+        X_list.columns = ['datasource_encoded',
+                          'is_top',
+                          'is_retweeted',
+                          'category_encoded',
+                          'source_type_encoded',
+                          'year',
+                          'month',
+                          'day',
+                          'hour',
+                          'minute',
+                          'second',
+                          'weekday_encoded']
+
+        return X_list
 
     def feature_of_time(self):
         scheduled_time = datetime.datetime.now().replace(hour=AUTO_SCHE_CONFIG['daily_preprocess_time']['hour'],
