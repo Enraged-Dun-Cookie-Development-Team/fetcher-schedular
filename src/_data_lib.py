@@ -13,7 +13,7 @@ from src.instance_utils import get_new_instance_name
 from src._log_lib import logger
 from src.db import HandleMysql, HandleRedis
 from src.strategy import *
-from src._conf_lib import CONFIG
+from src._conf_lib import CONFIG, AUTO_SCHE_CONFIG
 from src._http_lib import PostManager
 from src.auto_sche.model_loader import MODEL_DICT
 from src.auto_sche.model_events import feat_processer
@@ -263,7 +263,6 @@ class AutoMaintainer(object):
         self.datasource_num = 24
 
 
-
     def activate_send_request(self):
         """
         1. 获取当前时间所需蹲饼的平台 + 获取当前所需蹲饼平台对应的蹲饼器
@@ -342,7 +341,10 @@ class AutoMaintainer(object):
         pending_datsource_stats_df = pending_datsource_stats_df[pending_datsource_stats_df > 0].reset_index()
         
         pending_datasource_idx = pending_datasource_stats_df['datasource'].tolist()
-        pending_datasource_names = [pending_datasource_idx[c] for c in pending_datasource_idx]
+        
+        # 转换成归一化的数据源唯一名称。
+        pending_datasource_names = [
+                pending_datasource_idx.get(c, AUTO_SCHE_CONFIG['default_datasource_name']) for c in pending_datasource_idx]
 
         return pending_datasource_names
 

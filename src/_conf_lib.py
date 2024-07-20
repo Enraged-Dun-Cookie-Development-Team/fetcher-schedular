@@ -46,7 +46,7 @@ class ConfigParser(object):
         auto_sche_conf['datasource_to_idx_mapping'] = datasource_to_idx_mapping
         auto_sche_conf['idx_to_datasource_mapping'] = idx_to_datasource_mapping
 
-
+        
         # 3. 配置合并
 
         self.CONFIG = conf
