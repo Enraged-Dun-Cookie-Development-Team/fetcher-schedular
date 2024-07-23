@@ -18,6 +18,7 @@ from src._http_lib import PostManager
 from src.auto_sche.model_loader import MODEL_DICT
 from src.auto_sche.model_events import feat_processer
 
+
 class Maintainer(object):
     '''
     多个蹲饼器的信息管理器。
@@ -251,7 +252,7 @@ class AutoMaintainer(object):
     用于创建与更新蹲饼器的蹲饼策略.
     '''
     def __init__(self):
-        self.pm = PostManager(max_workers=5)
+        self.pm = PostManager(max_workers=1) # max=1 即为同步
         self.model = MODEL_DICT['decision_tree_model']
 
         # 存储每天模型预测的结果

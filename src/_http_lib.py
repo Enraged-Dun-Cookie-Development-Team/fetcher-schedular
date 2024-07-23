@@ -17,8 +17,9 @@ import requests
 from concurrent.futures import ThreadPoolExecutor
 import queue
 
+
 class PostManager:
-    def __init__(self, max_workers=10):
+    def __init__(self, max_workers=1):
         self.queue = queue.Queue()
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.future_to_data = {}
@@ -43,7 +44,7 @@ class PostManager:
 
 if __name__ == '__main__':
     # 使用示例
-    pm = PostManager(max_workers=5)
+    pm = PostManager(max_workers=1) # =1 表示同步.
     for i in range(10):
         data = {'key': f'value{i}'}
         pm.add_data('http://example.com/api', data)
