@@ -27,7 +27,6 @@ class DataPool:
         self.fetcher_platform_config_df = select_fetcher_platform_config()
 
 
-
 class BasicStrategy:
     """
     策略基类
@@ -412,6 +411,4 @@ def set_config_in_matrix_datasource(df_given_live_number,
 #                                )
 
 manual_strategy = ManualStrategy()
-# manual_strategy.update(maintainer=None)
-
 

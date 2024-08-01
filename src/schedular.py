@@ -404,6 +404,8 @@ class HealthMonitor(object):
             fetcher_config_pool.fetcher_config_update(maintainer)
             self.UPDATE_CONFIG_FLAG = False  # 复位
 
+            # 更新 auto_maintainer 里面用到的数据库内容.
+            auto_maintainer.set_id_config_dict()
         # 蹲饼器蹲失败的平台情况check:
         # 遍历所有失败的蹲饼器 * 平台, 进行倒计时更新。倒计时小于0则将它从失败平台列表里剔除。
         for instance_id in maintainer.failed_platform_by_instance_countdown:

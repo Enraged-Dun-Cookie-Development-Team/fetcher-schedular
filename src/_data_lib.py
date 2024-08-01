@@ -252,8 +252,17 @@ class AutoMaintainer(object):
     用于创建与更新蹲饼器的蹲饼策略.
     '''
     def __init__(self):
-        self.pm = PostManager(max_workers=1) # max=1 即为同步
+        self.pm = PostManager(max_workers=1)  # max=1 即为同步
         self.model = MODEL_DICT['decision_tree_model']
+
+
+        # 用[数据库里的datasource_id] 查询对应的[config].
+        self.datasource_id_to_config_mapping = dict()
+
+        # [不同蹲饼器数量下的]，[数据库里的datasource_id] 查询对应的[蹲饼器编号]。
+        self.live_number_to_datasource_id_to_fetcher_count_mapping = dict()
+
+        self.set_config_mappings()
 
         # 存储每天模型预测的结果
         self._model_predicted_result_pool = None
@@ -263,17 +272,17 @@ class AutoMaintainer(object):
         # 后面改成配置
         self.datasource_num = 24
 
-
     def activate_send_request(self):
         """
         1. 获取当前时间所需蹲饼的平台 + 获取当前所需蹲饼平台对应的蹲饼器
         2. 发送请求.
         """
 
-        post_data_list = self._find_pending_request_fetcher()
+        pending_datasources = self.get_pending_datasources()
+
+        post_data_list = self.get_post_data_list(pending_datasources)
 
         self._send_request(post_data_list)
-
 
     def daily_model_predict(self):
         """
@@ -281,11 +290,49 @@ class AutoMaintainer(object):
         """
         X_list = feat_processer.feature_combine()
 
-
         predicted_result = self.model.predict(X_list)
 
         self._set_model_predicted_result_pool(X_list, predicted_result)
-        
+
+    def get_post_data_list(self, pending_datasources):
+
+        post_data_list = []
+
+        return post_data_list
+
+    def set_config_mappings(self):
+
+        # pending_datasources  # 这里还要实现：让哪个蹲饼器来蹲.
+        # 用 fetcher_config 来配
+        """
+        {
+            "$live_number$ = 1":{
+                "$datasource_id$ = 14": "$fetcher_count$ = 3"
+            }
+        }
+        """
+        # fetcher_datasource_config_df 的 id 是唯一的。即代表
+        fetcher_datasource_config_df = manual_strategy.data_pool.fetcher_datasource_config_df
+        fetcher_config_df = manual_strategy.data_pool.fetcher_config_df
+
+        # fetcher_datasource_config_df -> self.datasource_id_to_config_mapping
+        for idx in range(fetcher_datasource_config_df.shape[0]):
+            cur_id = fetcher_datasource_config_df.iloc[idx]['id']
+            cur_config = fetcher_datasource_config_df.iloc[idx]['config']
+            if isinstance(cur_config, str):
+                cur_config = json.loads(cur_config)
+
+            self.datasource_id_to_config_mapping[cur_id] = cur_config
+
+        # fetcher_config_df -> self.live_number_to_datasource_id_to_fetcher_count_mapping
+        # 取出每个存活蹲饼器的数量列表
+        alive_fetcher_num_list = list(set(fetcher_config_df['live_number'].tolist()))
+        for cur_alive_fetcher_num in alive_fetcher_num_list:
+            df_tmp = fetcher_config_df[fetcher_config_df['live_number']].copy().reset_index(drop=True)
+            self.live_number_to_datasource_id_to_fetcher_count_mapping[cur_alive_fetcher_num] = dict()
+            for idx in range(df_tmp.shape[0]):
+                pass # 写到这了
+
 
     def _set_model_predicted_result_pool(self, X_list, predicted_result):
         """
@@ -300,11 +347,9 @@ class AutoMaintainer(object):
         # 使用.dt.strftime()将日期时间对象格式化为字符串
         X_list['datetime_str'] = X_list['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
+        self._model_predicted_result_pool = X_list
 
-        self._model_predicted_result_pool = predicted_result
-
-
-    def get_pending_datasources(pred_df, end_time=None, time_window_seconds=None):
+    def get_pending_datasources(self,  end_time=None, time_window_seconds=None):
         
         # 设置需要判断的时间段的右端点
         if not end_time:
@@ -317,11 +362,11 @@ class AutoMaintainer(object):
         # 从4点过去，经过了多少个小时
         cur_hour_offset = max((end_time.hour + 24 - 4) % 24, 1)
 
-        X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * interval_seconds * datasource_num * 3600:
+        X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * \
+                                                                 self.interval_seconds * \
+                                                                 self.datasource_num * 3600:
                     (cur_hour_offset + 1) * self.interval_seconds * self.datasource_num * 3600
                     ].reset_index(drop=True)
-
-
 
         # 设置窗口长度
         if not time_window_seconds:
@@ -334,25 +379,26 @@ class AutoMaintainer(object):
         
         # print(start_time)
 
-        target_df = pred_df[
-            np.logical_and(pred_df['datetime_str'] >= start_time, 
-                          pred_df['datetime_str'] <= end_time)]
+        target_df = X_list_filtered[
+            np.logical_and(X_list_filtered['datetime_str'] >= start_time,
+                          X_list_filtered['datetime_str'] <= end_time)]
         
-        pending_datsource_stats_df = target_df.groupby('datasource')['predicted_y'].sum()
-        pending_datsource_stats_df = pending_datsource_stats_df[pending_datsource_stats_df > 0].reset_index()
+        pending_datasource_stats_df = target_df.groupby('datasource')['predicted_y'].sum()
+        pending_datasource_stats_df = pending_datasource_stats_df[pending_datasource_stats_df > 0].reset_index()
         
         pending_datasource_idx = pending_datasource_stats_df['datasource'].tolist()
         
-        # 转换成归一化的数据源唯一名称。
+        # 转换成归一化的数据源唯一名称(这里输出内容是 datasource的id 的字符串)。
         pending_datasource_names = [
-                pending_datasource_idx.get(c, AUTO_SCHE_CONFIG['default_datasource_name']) for c in pending_datasource_idx]
+                pending_datasource_idx.get(c, AUTO_SCHE_CONFIG['default_datasource_name'])
+                                    for c in pending_datasource_idx]
 
         return pending_datasource_names
 
     def _send_request(self, data):
         
         for d in data:
-            
+
             cur_url = d['url']
             d.pop('url')
 
