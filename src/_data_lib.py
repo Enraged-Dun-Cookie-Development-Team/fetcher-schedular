@@ -305,10 +305,14 @@ class AutoMaintainer(object):
         # pending_datasources  # 这里还要实现：让哪个蹲饼器来蹲.
         # 用 fetcher_config 来配
         """
-        {
+        self.live_number_to_datasource_id_to_fetcher_count_mapping = {
             "$live_number$ = 1":{
                 "$datasource_id$ = 14": "$fetcher_count$ = 3"
             }
+        }
+
+        self.datasource_id_to_config_mapping = {
+            "$id$ = 14": "$config$ = {'xx':'yy'}"
         }
         """
         # fetcher_datasource_config_df 的 id 是唯一的。即代表
@@ -331,8 +335,9 @@ class AutoMaintainer(object):
             df_tmp = fetcher_config_df[fetcher_config_df['live_number']].copy().reset_index(drop=True)
             self.live_number_to_datasource_id_to_fetcher_count_mapping[cur_alive_fetcher_num] = dict()
             for idx in range(df_tmp.shape[0]):
-                pass # 写到这了
-
+                line = df_tmp.iloc[idx]
+                self.live_number_to_datasource_id_to_fetcher_count_mapping[cur_alive_fetcher_num
+                        ][line['datasource_id']] = line['fetcher_count']
 
     def _set_model_predicted_result_pool(self, X_list, predicted_result):
         """
