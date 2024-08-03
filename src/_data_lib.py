@@ -52,6 +52,8 @@ class Maintainer(object):
 
         self._init_conn_redis(conf)
 
+        self.fetcher_url_dict = dict()
+
         # 当前是否产出了有效的配置。没有的话就禁止蹲饼器更新.
         self.has_valid_config = True
 
@@ -272,15 +274,16 @@ class AutoMaintainer(object):
         # 后面改成配置
         self.datasource_num = 24
 
-    def activate_send_request(self):
+    def activate_send_request(self, maintainer:Maintainer):
         """
         1. 获取当前时间所需蹲饼的平台 + 获取当前所需蹲饼平台对应的蹲饼器
         2. 发送请求.
+        TODO: 这里仍然要传入maintainer. 因为需要获取对应的http地址。
         """
 
-        pending_datasources = self.get_pending_datasources()
+        pending_datasources_id_list = self.get_pending_datasources()
 
-        post_data_list = self.get_post_data_list(pending_datasources)
+        post_data_list = self.get_post_data_list(pending_datasources_id_list, maintainer)
 
         self._send_request(post_data_list)
 
@@ -294,9 +297,40 @@ class AutoMaintainer(object):
 
         self._set_model_predicted_result_pool(X_list, predicted_result)
 
-    def get_post_data_list(self, pending_datasources):
+    def get_post_data_list(self, pending_datasources_id_list, maintainer:Maintainer):
+        """
 
+        :param pending_datasources_id_list: 需要蹲饼的datasource_id
+        """
         post_data_list = []
+
+        # 当前可用的蹲饼器，给个序号. fetcher_config表里的蹲饼器编号是1开始的。
+        fetcher_dict = {idx + 1: m for idx, m in enumerate(maintainer.alive_instance_id_list)}
+        # 获取每个蹲饼器对应的url.
+        fetcher_url_dict = maintainer.fetcher_url_dict
+        alive_fetcher_num = len(fetcher_dict)
+
+        # 当前数量下的所有fetcher的配置。
+        fetcher_config_pool_of_live_num = self.live_number_to_datasource_id_to_fetcher_count_mapping[alive_fetcher_num]
+
+        for cur_datasource_id in pending_datasources_id_list:
+
+            # 蹲饼器序号
+            cur_fetcher_count = fetcher_config_pool_of_live_num[cur_datasource_id]
+            # 当前蹲饼器的id, 用于索引url.
+            cur_fetcher_id = fetcher_dict[cur_fetcher_count % alive_fetcher_num + 1]
+            # 要发送的蹲饼器的url.
+            cur_url = fetcher_url_dict[cur_fetcher_id]
+            # 要发送的配置
+            cur_config = self.datasource_id_to_config_mapping.get(cur_datasource_id, {})
+
+            # TODO: 可以放入其他辅助字段，例如后续需要持续的蹲饼时间等.
+
+            if cur_config:
+                post_data_list.append({
+                    'url': cur_url,
+                    'config': cur_config,
+                })
 
         return post_data_list
 
@@ -312,10 +346,10 @@ class AutoMaintainer(object):
         }
 
         self.datasource_id_to_config_mapping = {
-            "$id$ = 14": "$config$ = {'xx':'yy'}"
+            "$datasource_id$ = 14": "$config$ = {'xx':'yy'}"
         }
         """
-        # fetcher_datasource_config_df 的 id 是唯一的。即代表
+        # 取出和索引datasource、索引蹲饼器及其配置相关的两个数据表。
         fetcher_datasource_config_df = manual_strategy.data_pool.fetcher_datasource_config_df
         fetcher_config_df = manual_strategy.data_pool.fetcher_config_df
 
@@ -391,14 +425,12 @@ class AutoMaintainer(object):
         pending_datasource_stats_df = target_df.groupby('datasource')['predicted_y'].sum()
         pending_datasource_stats_df = pending_datasource_stats_df[pending_datasource_stats_df > 0].reset_index()
         
-        pending_datasource_idx = pending_datasource_stats_df['datasource'].tolist()
-        
-        # 转换成归一化的数据源唯一名称(这里输出内容是 datasource的id 的字符串)。
-        pending_datasource_names = [
-                pending_datasource_idx.get(c, AUTO_SCHE_CONFIG['default_datasource_name'])
-                                    for c in pending_datasource_idx]
+        pending_datasource_id_list = MODEL_DICT['datasource_encoder'].inverse_transform(pending_datasource_stats_df['datasource'].tolist())
+        pending_datasource_id_list = list(pending_datasource_id_list)
 
-        return pending_datasource_names
+        # 输出的每个元素是 datasource_id，int类型的。可以直接和数据库里的datasource_id对应)。
+
+        return pending_datasource_id_list
 
     def _send_request(self, data):
         

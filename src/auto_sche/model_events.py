@@ -25,7 +25,7 @@ class FeatureProcesser:
         # 需要处理：12个feature
         X_list = []
         feature_num = 12
-        datasource_num = len(AUTO_SCHE_CONFIG['datasource'])
+        datasource_num = AUTO_SCHE_CONFIG['DATASOURCE_POSSIBLE_NUMS'] # 域内实际出现过的蹲饼器编号数量.
         time_points = self.feature_of_time()
 
         for t in tqdm(time_points):
@@ -115,7 +115,7 @@ start_time = datetime.now()
 
 def model_predict():
     global predictions, start_time
-    print(f"Model prediction triggered at {datetime.now()}")
+    print("Model prediction triggered at {}".format(datetime.now()))
 
     # 先按每秒1个点写demo.
     predictions = [False] * 86400

@@ -18,9 +18,9 @@ class ModelLoader:
 
     def load_all_model(self):
         for name in [
-            'decision_tree_model',
-            'weekday_encoder',
-            'datasource_encoder'
+            'decision_tree_model_v2',
+            'weekday_encoder_v2',
+            'datasource_encoder_v2'
         ]:
             self.load_model(name)
 

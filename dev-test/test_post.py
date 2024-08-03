@@ -34,17 +34,17 @@ print(res.content)
 # res = requests.get(url, headers=headers)
 # print(res.content)
 #
-headers = {'instance_id': 'lwt-02'}
+headers = {'instance_id': 'lwt-02', 'instance_url': "http://127.0.0.1:8002"}
 url = 'http://0.0.0.0:{}/heartbeat'.format(port)
 res = requests.get(url, headers=headers)
 print(res.content)
 
-headers = {'instance_id': 'lwt-03'}
+headers = {'instance_id': 'lwt-03', 'instance_url': "http://127.0.0.1:8003"}
 url = 'http://0.0.0.0:{}/heartbeat'.format(port)
 res = requests.get(url, headers=headers)
 print(res.content)
 
-headers = {'instance_id': 'lwt-04'}
+headers = {'instance_id': 'lwt-04', 'instance_url': "http://127.0.0.1:8004"}
 url = 'http://0.0.0.0:{}/heartbeat'.format(port)
 res = requests.get(url, headers=headers)
 print(res.content)

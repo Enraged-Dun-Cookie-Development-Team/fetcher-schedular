@@ -64,10 +64,12 @@ class HeartBeatSchedular(web.RequestHandler):
         """
         head = self.request.headers
         instance_id = head.get('instance_id', '')
-
+        instance_url = head.get('instance_url', '')
         # 不涉及数据库操作，只对内存里已有的活跃蹲饼器进行梳理和记录，扫描时再进行配置的更新.
         new_name = maintainer.update_instance_status(instance_id)
 
+        # maintainer存储当前instance的http地址
+        maintainer.fetcher_url_dict[instance_id] = instance_url
         # 是否需要给蹲饼器更新配置.
         need_return_config = maintainer.need_update[instance_id]
 
@@ -307,7 +309,7 @@ class FetcherRequestSender(object):
         向指定的蹲饼器发送。
         具体实现在auto_maintainer.activate_send_command 方法中。
         """
-        auto_maintainer.activate_send_request()
+        auto_maintainer.activate_send_request(maintainer.alive_instance_id_list)
 
 
 class HealthMonitor(object):
