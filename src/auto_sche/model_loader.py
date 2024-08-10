@@ -26,8 +26,8 @@ class ModelLoader:
 
     def load_model(self, name, suffix='.joblib'):
         # 加载模型、编码器等等
-        loaded_model = load('{}{}'.format(name, suffix))
-        self.model_dict[name] = loaded_model
+        loaded_model = load('./ml_model/{}{}'.format(name, suffix))
+        self.model_dict[name.split('_v')[0]] = loaded_model
 
     def __getitem__(self, key):
         return self.model_dict.get(key)

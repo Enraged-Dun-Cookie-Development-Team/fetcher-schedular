@@ -24,7 +24,7 @@ port = 12345  # 设置端口
 
 # 2. 蹲饼器心跳测试
 
-headers = {'instance_id': 'lwt-01'}
+headers = {'instance_id': 'lwt-01', 'instance_url': "http://127.0.0.1:8004"}
 url = 'http://0.0.0.0:{}/heartbeat'.format(port)
 res = requests.get(url, headers=headers)
 print(res.content)
@@ -80,3 +80,4 @@ url = 'http://0.0.0.0:{}/standalone-fetcher-get-config'.format(port)
 input_data = {'datasource_id_list': [28, 25]}
 res = requests.post(url, json=input_data)
 pprint.pprint(json.loads(res.content))
+

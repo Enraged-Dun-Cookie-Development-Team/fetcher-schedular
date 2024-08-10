@@ -64,6 +64,7 @@ class Maintainer(object):
         self.redis = HandleRedis(conf)
         try:
             self.redis.get('test')
+            self.redis.set('cookie:fetcher:config:live:number', 0)
             logger.info('[REDIS conn] success.')
         except:
             logger.error('[REDIS conn] failed: ' + str(traceback.format_exc()))
@@ -264,7 +265,8 @@ class AutoMaintainer(object):
         # [不同蹲饼器数量下的]，[数据库里的datasource_id] 查询对应的[蹲饼器编号]。
         self.live_number_to_datasource_id_to_fetcher_count_mapping = dict()
 
-        self.set_config_mappings()
+        # 放在 init 阶段执行.
+        # self.set_config_mappings()
 
         # 存储每天模型预测的结果
         self._model_predicted_result_pool = None
@@ -282,7 +284,7 @@ class AutoMaintainer(object):
         """
 
         pending_datasources_id_list = self.get_pending_datasources()
-
+        # print('####', maintainer)
         post_data_list = self.get_post_data_list(pending_datasources_id_list, maintainer)
 
         self._send_request(post_data_list)
@@ -310,6 +312,10 @@ class AutoMaintainer(object):
         fetcher_url_dict = maintainer.fetcher_url_dict
         alive_fetcher_num = len(fetcher_dict)
 
+        if alive_fetcher_num == 0:
+            logger.info('当前蹲饼器全部失效，不主动发送请求')
+            return []
+
         # 当前数量下的所有fetcher的配置。
         fetcher_config_pool_of_live_num = self.live_number_to_datasource_id_to_fetcher_count_mapping[alive_fetcher_num]
 
@@ -322,11 +328,11 @@ class AutoMaintainer(object):
             # 要发送的蹲饼器的url.
             cur_url = fetcher_url_dict[cur_fetcher_id]
             # 要发送的配置
-            cur_config = self.datasource_id_to_config_mapping.get(cur_datasource_id, {})
+            cur_config = self.datasource_id_to_config_mapping.get(cur_datasource_id, -1)
 
             # TODO: 可以放入其他辅助字段，例如后续需要持续的蹲饼时间等.
 
-            if cur_config:
+            if not isinstance(cur_config, int):
                 post_data_list.append({
                     'url': cur_url,
                     'config': cur_config,
@@ -366,7 +372,7 @@ class AutoMaintainer(object):
         # 取出每个存活蹲饼器的数量列表
         alive_fetcher_num_list = list(set(fetcher_config_df['live_number'].tolist()))
         for cur_alive_fetcher_num in alive_fetcher_num_list:
-            df_tmp = fetcher_config_df[fetcher_config_df['live_number']].copy().reset_index(drop=True)
+            df_tmp = fetcher_config_df[fetcher_config_df['live_number'] == cur_alive_fetcher_num].copy().reset_index(drop=True)
             self.live_number_to_datasource_id_to_fetcher_count_mapping[cur_alive_fetcher_num] = dict()
             for idx in range(df_tmp.shape[0]):
                 line = df_tmp.iloc[idx]
@@ -401,6 +407,12 @@ class AutoMaintainer(object):
         # 从4点过去，经过了多少个小时
         cur_hour_offset = max((end_time.hour + 24 - 4) % 24, 1)
 
+        # 初始化，没有开始预测的时候：
+        # print('?' * 20, self._model_predicted_result_pool)
+        if self._model_predicted_result_pool is None:
+            pending_datasource_id_list = list(self.datasource_id_to_config_mapping.keys())
+            return pending_datasource_id_list
+
         X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * \
                                                                  self.interval_seconds * \
                                                                  self.datasource_num * 3600:
@@ -431,9 +443,13 @@ class AutoMaintainer(object):
         # 输出的每个元素是 datasource_id，int类型的。可以直接和数据库里的datasource_id对应)。
 
         return pending_datasource_id_list
+        # return [22, 26]
 
     def _send_request(self, data):
-        
+
+        # logger.info("debug发送的内容:")
+        # print(data)
+
         for d in data:
 
             cur_url = d['url']

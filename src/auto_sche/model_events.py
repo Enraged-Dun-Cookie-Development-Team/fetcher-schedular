@@ -29,12 +29,12 @@ class FeatureProcesser:
         time_points = self.feature_of_time()
 
         for t in tqdm(time_points):
-            cur_feature = np.zeros([datasource_num, feature_num], dtype=np.int)
+            cur_feature = np.zeros([datasource_num, feature_num], dtype=int)
 
             # datasource_encoded
             cur_feature[:, 0] = np.arange(datasource_num)
             # time
-            cur_feature[:, 5:11] = np.array(t, dtype=np.int)
+            cur_feature[:, 5:11] = np.array(t, dtype=int)
             # weekday encoded
             cur_feature[:, 11] = MODEL_DICT['weekday_encoder'].transform([self._convert_date(*t[:3])])
 
@@ -59,9 +59,9 @@ class FeatureProcesser:
         return X_list
 
     def feature_of_time(self):
-        scheduled_time = datetime.datetime.now().replace(hour=AUTO_SCHE_CONFIG['daily_preprocess_time']['hour'],
-                                                         minute=AUTO_SCHE_CONFIG['daily_preprocess_time']['minute'],
-                                                         second=AUTO_SCHE_CONFIG['daily_preprocess_time']['second'],
+        scheduled_time = datetime.datetime.now().replace(hour=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR'],
+                                                         minute=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['MINUTE'],
+                                                         second=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['SECOND'],
                                                          microsecond=0)
 
         # # 如果当前时间已经过了今天的凌晨4点，那么将定时任务时间设置为明天的凌晨4点
@@ -110,23 +110,20 @@ class FeatureProcesser:
 
 # 以及用模型进行预测
 # 记录开始执行的时间
-start_time = datetime.now()
+start_time = datetime.datetime.now()
 
 
 def model_predict():
     global predictions, start_time
-    print("Model prediction triggered at {}".format(datetime.now()))
+    print("Model prediction triggered at {}".format(datetime.datetime.now()))
 
     # 先按每秒1个点写demo.
     predictions = [False] * 86400
     predictions[10] = True
     predictions[20] = True
     # 重新记录程序开始执行的时间
-    start_time = datetime.now()
+    start_time = datetime.datetime.now()
     
-
-
-
 
 # 用于每日形成待预测的特征
 feat_processer = FeatureProcesser()

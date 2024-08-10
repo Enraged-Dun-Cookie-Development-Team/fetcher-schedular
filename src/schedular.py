@@ -309,7 +309,7 @@ class FetcherRequestSender(object):
         向指定的蹲饼器发送。
         具体实现在auto_maintainer.activate_send_command 方法中。
         """
-        auto_maintainer.activate_send_request(maintainer.alive_instance_id_list)
+        auto_maintainer.activate_send_request(maintainer)
 
 
 class HealthMonitor(object):
@@ -334,7 +334,8 @@ class HealthMonitor(object):
 
         if maintainer.is_init:
             fetcher_config_pool.fetcher_config_update(maintainer)
-            print('maintainer初始化:', maintainer.has_valid_config)
+            auto_maintainer.set_config_mappings()
+            logger.info('maintainer初始化:{}'.format(maintainer.has_valid_config))
             maintainer.is_init = False
 
         now = time.time()
@@ -407,7 +408,7 @@ class HealthMonitor(object):
             self.UPDATE_CONFIG_FLAG = False  # 复位
 
             # 更新 auto_maintainer 里面用到的数据库内容.
-            auto_maintainer.set_id_config_dict()
+            auto_maintainer.set_config_mappings()
         # 蹲饼器蹲失败的平台情况check:
         # 遍历所有失败的蹲饼器 * 平台, 进行倒计时更新。倒计时小于0则将它从失败平台列表里剔除。
         for instance_id in maintainer.failed_platform_by_instance_countdown:
@@ -456,14 +457,16 @@ if __name__ == '__main__':
 
     # 每日预测任务
     daily_scheduler = BackgroundScheduler()  
-    daily_scheduler.add_job(auto_maintainer.daily_model_predict, 'cron', hour=4)
+    daily_scheduler.add_job(auto_maintainer.daily_model_predict, 'cron',
+                            hour=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR'],
+                            minute=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['MINUTE'])
     daily_scheduler.start()  
 
     # 蹲饼器健康情况监控
     ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()
     
     # 向蹲饼器发送蹲饼指令
-    ioloop.PeriodicCallback(fetcher_request_sender.send_request, 5000).start()
+    ioloop.PeriodicCallback(fetcher_request_sender.send_request, 10000).start()
 
     ioloop.IOLoop.instance().start()
 

@@ -190,8 +190,6 @@ class ManualStrategy(BasicStrategy):
                                fetcher_config_df.platform == p)
             ].copy()  # 注意copy出来，避免修改原始数据.
             # print('#' * 20)
-            # print(df_tmp)
-            # print('#' * 30)
             # print(p)
             # print(df_tmp)
             matrix_datasource = set_config_in_matrix_datasource(df_tmp,
@@ -210,8 +208,8 @@ class ManualStrategy(BasicStrategy):
         
         latest_config_pool = self.construct_config(matrix_datasource)
         # fetcher_config_pool.config_pool = latest_config_pool
-        print('&' * 20)
-        print(latest_config_pool)
+        # print('&' * 20)
+        # print(latest_config_pool)
         return True, latest_config_pool
 
     def _update_matrix_with_ban_info(self, ban_info):
