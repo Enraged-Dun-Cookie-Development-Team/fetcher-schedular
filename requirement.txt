@@ -14,3 +14,6 @@ scikit-learn==1.5.1
 numpy==1.26.4
 
 joblib==1.4.2
+
+grpcio-tools
+protobuf
