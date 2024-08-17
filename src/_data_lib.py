@@ -456,7 +456,7 @@ class AutoMaintainer(object):
 
             cur_url = d['url']
             d.pop('url')
-            messager.send_to_bot(info_dict={'info':str({'url': cur_url, 'data': d})})
+            messager.send_to_bot(info_dict={'info': '{} '.format(datetime.datetime.now()) + str({'url': cur_url, 'data': d})})
             self.pm.add_data(cur_url, d)
 
 
