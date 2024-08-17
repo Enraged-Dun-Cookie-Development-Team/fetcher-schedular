@@ -38,16 +38,16 @@ headers = {'instance_id': 'lwt-02', 'instance_url': "http://127.0.0.1:8002"}
 url = 'http://0.0.0.0:{}/heartbeat'.format(port)
 res = requests.get(url, headers=headers)
 print(res.content)
-
-headers = {'instance_id': 'lwt-03', 'instance_url': "http://127.0.0.1:8003"}
-url = 'http://0.0.0.0:{}/heartbeat'.format(port)
-res = requests.get(url, headers=headers)
-print(res.content)
-
-headers = {'instance_id': 'lwt-04', 'instance_url': "http://127.0.0.1:8004"}
-url = 'http://0.0.0.0:{}/heartbeat'.format(port)
-res = requests.get(url, headers=headers)
-print(res.content)
+#
+# headers = {'instance_id': 'lwt-03', 'instance_url': "http://127.0.0.1:8003"}
+# url = 'http://0.0.0.0:{}/heartbeat'.format(port)
+# res = requests.get(url, headers=headers)
+# print(res.content)
+#
+# headers = {'instance_id': 'lwt-04', 'instance_url': "http://127.0.0.1:8004"}
+# url = 'http://0.0.0.0:{}/heartbeat'.format(port)
+# res = requests.get(url, headers=headers)
+# print(res.content)
 
 time.sleep(3)
 
@@ -61,17 +61,17 @@ print(res.content)
 
 # 4. 蹲饼器获取配置测试
 
-headers = {'instance_id': 'lwt-02'}
-url = 'http://0.0.0.0:{}/fetcher-get-config'.format(port)
-res = requests.get(url, headers=headers)
-print('测试蹲饼器获取配置：')
-pprint.pprint(json.loads(res.content))
-
-headers = {'instance_id': 'lwt-03'}
-url = 'http://0.0.0.0:{}/fetcher-get-config'.format(port)
-res = requests.get(url, headers=headers)
-print('测试蹲饼器获取配置：')
-pprint.pprint(json.loads(res.content))
+# headers = {'instance_id': 'lwt-02'}
+# url = 'http://0.0.0.0:{}/fetcher-get-config'.format(port)
+# res = requests.get(url, headers=headers)
+# print('测试蹲饼器获取配置：')
+# pprint.pprint(json.loads(res.content))
+#
+# headers = {'instance_id': 'lwt-03'}
+# url = 'http://0.0.0.0:{}/fetcher-get-config'.format(port)
+# res = requests.get(url, headers=headers)
+# print('测试蹲饼器获取配置：')
+# pprint.pprint(json.loads(res.content))
 
 # 5. mook蹲饼器获取配置测试
 print('测试standalone蹲饼器获取配置：')

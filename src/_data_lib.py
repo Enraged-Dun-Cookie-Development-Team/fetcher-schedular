@@ -18,6 +18,8 @@ from src._http_lib import PostManager
 from src.auto_sche.model_loader import MODEL_DICT
 from src.auto_sche.model_events import feat_processer
 
+# 打日志
+from src._grpc_lib import messager
 
 class Maintainer(object):
     '''
@@ -454,7 +456,7 @@ class AutoMaintainer(object):
 
             cur_url = d['url']
             d.pop('url')
-
+            messager.send_to_bot(info_dict={'info':str({'url': cur_url, 'data': d})})
             self.pm.add_data(cur_url, d)
 
 
