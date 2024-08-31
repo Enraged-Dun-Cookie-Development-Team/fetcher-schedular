@@ -17,7 +17,7 @@ humanize.i18n.activate("zh_CN")
 from src._data_lib import maintainer, auto_maintainer, fetcher_config_pool, NpEncoder
 from src._log_lib import logger
 from src._conf_lib import CONFIG, AUTO_SCHE_CONFIG
-
+from src._test_case import send_heartbeat
 
 MAX_INT = 16777216
 
@@ -467,6 +467,8 @@ if __name__ == '__main__':
     
     # 向蹲饼器发送蹲饼指令
     ioloop.PeriodicCallback(fetcher_request_sender.send_request, 10000).start()
+
+    ioloop.PeriodicCallback(send_heartbeat, 10000).start()
 
     ioloop.IOLoop.instance().start()
 

@@ -22,7 +22,7 @@ class MessagerGRPC(object):
     def send_to_bot(self, info_dict):
 
         server = 3
-        level = info_dict.get('level', 2)
+        level = info_dict.get('level', 1)
         manual = False
         info = info_dict.get('info', 'nothing')
         extra = ''
