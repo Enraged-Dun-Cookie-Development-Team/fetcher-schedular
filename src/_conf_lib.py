@@ -37,6 +37,7 @@ class ConfigParser(object):
         # 自动蹲饼的config构造：
         # 1. 读取 datasource -> encoded feature的映射表
         # 2. 读取其他配置
+        print(__file__)
         auto_sche_conf = self.load_json_config(config_name='./conf/auto_sche.conf')
 
         # datasource_to_idx_mapping = self.load_json_config('./conf/datasource_to_idx_mapping.json')
