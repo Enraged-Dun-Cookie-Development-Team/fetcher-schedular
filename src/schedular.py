@@ -17,7 +17,6 @@ humanize.i18n.activate("zh_CN")
 from src._data_lib import maintainer, auto_maintainer, fetcher_config_pool, NpEncoder
 from src._log_lib import logger
 from src._conf_lib import CONFIG, AUTO_SCHE_CONFIG
-from src._test_case import send_heartbeat
 
 MAX_INT = 16777216
 
@@ -343,6 +342,10 @@ class HealthMonitor(object):
         # 开始扫描；没有状态变化则不记录。
         # logger.info('[Start a new scan]')
 
+        # 测试用
+        test_headtbeat()
+        # print(11111)
+
         # 通过对 上一次scan时 活跃的蹲饼器 和 这一次scan活跃的蹲饼器 进行对比，判断蹲饼器级别是否需要更新
         last_updated_instance_list = list(maintainer._last_updated_time.keys())
         # 通过对上一次scan时平台级别被ban情况和当前被ban情况的对比，判断是否需要更新config.
@@ -432,6 +435,20 @@ class HealthMonitor(object):
         # logger.info(str(maintainer._failed_platform_by_instance))
 
 
+def test_headtbeat():
+    instance_id = 'lwt-01'
+    instance_url = 'http://127.0.0.1:8004'
+    new_name = maintainer.update_instance_status(instance_id)
+    # maintainer存储当前instance的http地址
+    maintainer.fetcher_url_dict[instance_id] = instance_url
+
+    instance_id = 'lwt-02'
+    instance_url = 'http://127.0.0.1:8005'
+    new_name = maintainer.update_instance_status(instance_id)
+    # maintainer存储当前instance的http地址
+    maintainer.fetcher_url_dict[instance_id] = instance_url
+    # print(111)
+
 health_monitor = HealthMonitor()
 fetcher_request_sender = FetcherRequestSender()
 
@@ -468,7 +485,7 @@ if __name__ == '__main__':
     # 向蹲饼器发送蹲饼指令
     ioloop.PeriodicCallback(fetcher_request_sender.send_request, 10000).start()
 
-    ioloop.PeriodicCallback(send_heartbeat, 10000).start()
+    # ioloop.PeriodicCallback(send_heartbeat, 10000).start()
 
     ioloop.IOLoop.instance().start()
 
