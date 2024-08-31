@@ -17,5 +17,7 @@ joblib==1.4.2
 
 apscheduler==3.10.4
 
+requests==2.32.3
+
 grpcio-tools
 protobuf
