@@ -1,6 +1,8 @@
 export CEOBE__SCHEDULAR__HOST="127.0.0.1"
 export CEOBE__SCHEDULAR__PORT="12345"
 
+export CEOBE__BOT_GRPC__BASE_URL="127.0.0.1:5000"
+
 export CEOBE__DB__HOST="127.0.0.1"
 export CEOBE__DB__USER="root"
 export CEOBE__DB__PASSWORD="123"

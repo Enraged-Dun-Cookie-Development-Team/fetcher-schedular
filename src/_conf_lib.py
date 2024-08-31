@@ -4,6 +4,7 @@ import sys
 import traceback
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from src._log_lib import logger
 
 # 将json的所有key转换为大写
 def upper_json(json_info):
@@ -15,6 +16,7 @@ def upper_json(json_info):
                 key_upper = key.upper()
                 json_info[key_upper] = json_info[key]
                 del json_info[key]
+                # print(key)
                 upper_json(json_info[key_upper])
 
     elif isinstance(json_info,list):
@@ -29,17 +31,30 @@ class ConfigParser(object):
             conf = self.load_json_config()
             # print(conf)
         except:
-            traceback.print_exc()
+            # traceback.print_exc()
             conf = self.load_environ_config()
+            logger.info('config初始化：使用环境变量')
+        # 自动蹲饼的config构造：
+        # 1. 读取 datasource -> encoded feature的映射表
+        # 2. 读取其他配置
+        auto_sche_conf = self.load_json_config(config_name='./conf/auto_sche.conf')
+
+        # datasource_to_idx_mapping = self.load_json_config('./conf/datasource_to_idx_mapping.json')
+        # idx_to_datasource_mapping = {datasource_to_idx_mapping[c]['datasource_idx']: c for c in datasource_to_idx_mapping}
+        # auto_sche_conf['datasource_to_idx_mapping'] = datasource_to_idx_mapping
+        # auto_sche_conf['idx_to_datasource_mapping'] = idx_to_datasource_mapping
+        
+        # 3. 配置合并
 
         self.CONFIG = conf
+        self.AUTO_SCHE_CONFIG = auto_sche_conf
 
-    def load_json_config(self):
+    def load_json_config(self, config_name='./conf/conf.json'):
         """
         读取配置文件作为config.
         :return:
         """
-        with open('./conf/conf.json', 'r') as f:
+        with open(config_name, 'r') as f:
             conf = json.load(f)
             upper_json(conf)
 
@@ -82,4 +97,6 @@ class ConfigParser(object):
 
 conf_parser = ConfigParser()
 CONFIG = conf_parser.CONFIG
-print(CONFIG)
+AUTO_SCHE_CONFIG = conf_parser.AUTO_SCHE_CONFIG
+
+# print(CONFIG)

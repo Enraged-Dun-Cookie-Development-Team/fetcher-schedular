@@ -19,3 +19,11 @@
 # 可用接口
 
 请参考测试脚本 [test_post.py](dev-test/test_post.py) 获知目前可以调通的接口。
+
+# 本地开发
+
+* 配置本地环境变量
+* 启动数据库
+* 启动redis
+* 启动grpc server
+* 启动调度器

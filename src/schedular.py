@@ -1,5 +1,7 @@
 import tornado
 from tornado import web, ioloop
+from apscheduler.schedulers.background import BackgroundScheduler  
+
 import os
 import sys
 import time
@@ -12,9 +14,10 @@ import logging
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 humanize.i18n.activate("zh_CN")
 # print(sys.path)
-from src._data_lib import maintainer, fetcher_config_pool, NpEncoder
+from src._data_lib import maintainer, auto_maintainer, fetcher_config_pool, NpEncoder
 from src._log_lib import logger
-from src._conf_lib import CONFIG
+from src._conf_lib import CONFIG, AUTO_SCHE_CONFIG
+from src._test_case import send_heartbeat
 
 MAX_INT = 16777216
 
@@ -61,10 +64,12 @@ class HeartBeatSchedular(web.RequestHandler):
         """
         head = self.request.headers
         instance_id = head.get('instance_id', '')
-
+        instance_url = head.get('instance_url', '')
         # 不涉及数据库操作，只对内存里已有的活跃蹲饼器进行梳理和记录，扫描时再进行配置的更新.
         new_name = maintainer.update_instance_status(instance_id)
 
+        # maintainer存储当前instance的http地址
+        maintainer.fetcher_url_dict[instance_id] = instance_url
         # 是否需要给蹲饼器更新配置.
         need_return_config = maintainer.need_update[instance_id]
 
@@ -121,7 +126,7 @@ class HeartBeatSchedular(web.RequestHandler):
 class FetcherConfigHandler(web.RequestHandler):
     '''
     蹲饼器获取最新配置.
-    施工中.
+
     '''
     def get(self):
         """
@@ -294,6 +299,19 @@ class SchedularConfigHandler(web.RequestHandler):
             self.write({'status': 'fail', 'code': 500})
 
 
+class FetcherRequestSender(object):
+    def __init__(self):
+        pass
+
+    def send_request(self):
+        """
+        索引当前需要发送的信息；
+        向指定的蹲饼器发送。
+        具体实现在auto_maintainer.activate_send_command 方法中。
+        """
+        auto_maintainer.activate_send_request(maintainer)
+
+
 class HealthMonitor(object):
     """
     定时任务以确定健康的蹲饼器数量，从而调整config.
@@ -316,7 +334,8 @@ class HealthMonitor(object):
 
         if maintainer.is_init:
             fetcher_config_pool.fetcher_config_update(maintainer)
-            print('maintainer初始化:', maintainer.has_valid_config)
+            auto_maintainer.set_config_mappings()
+            logger.info('maintainer初始化:{}'.format(maintainer.has_valid_config))
             maintainer.is_init = False
 
         now = time.time()
@@ -388,6 +407,8 @@ class HealthMonitor(object):
             fetcher_config_pool.fetcher_config_update(maintainer)
             self.UPDATE_CONFIG_FLAG = False  # 复位
 
+            # 更新 auto_maintainer 里面用到的数据库内容.
+            auto_maintainer.set_config_mappings()
         # 蹲饼器蹲失败的平台情况check:
         # 遍历所有失败的蹲饼器 * 平台, 进行倒计时更新。倒计时小于0则将它从失败平台列表里剔除。
         for instance_id in maintainer.failed_platform_by_instance_countdown:
@@ -412,6 +433,7 @@ class HealthMonitor(object):
 
 
 health_monitor = HealthMonitor()
+fetcher_request_sender = FetcherRequestSender()
 
 if __name__ == '__main__':
     application = web.Application([
@@ -433,5 +455,21 @@ if __name__ == '__main__':
 
     application.listen(CONFIG['SCHEDULAR']['PORT'], address=CONFIG['SCHEDULAR']['HOST'])
 
-    ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()  # start scheduler 每隔2s执行一次f2s
+    # 每日预测任务
+    daily_scheduler = BackgroundScheduler()  
+    daily_scheduler.add_job(auto_maintainer.daily_model_predict, 'cron',
+                            hour=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR'],
+                            minute=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['MINUTE'])
+    daily_scheduler.start()  
+
+    # 蹲饼器健康情况监控
+    ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()
+    
+    # 向蹲饼器发送蹲饼指令
+    ioloop.PeriodicCallback(fetcher_request_sender.send_request, 10000).start()
+
+    ioloop.PeriodicCallback(send_heartbeat, 10000).start()
+
     ioloop.IOLoop.instance().start()
+
+
