@@ -10,3 +10,4 @@ ADD conf ./conf
 ADD ml_model ./ml_model
 
 CMD ["python", "src/schedular.py"]
+RUN pip list
