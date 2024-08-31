@@ -263,6 +263,7 @@ class AutoMaintainer(object):
 
         # 用[数据库里的datasource_id] 查询对应的[config].
         self.datasource_id_to_config_mapping = dict()
+        self.datasource_id_to_name_mapping = dict()
 
         # [不同蹲饼器数量下的]，[数据库里的datasource_id] 查询对应的[蹲饼器编号]。
         self.live_number_to_datasource_id_to_fetcher_count_mapping = dict()
@@ -332,13 +333,14 @@ class AutoMaintainer(object):
             cur_url = fetcher_url_dict[cur_fetcher_id]
             # 要发送的配置
             cur_config = self.datasource_id_to_config_mapping.get(cur_datasource_id, -1)
-
+            cur_datasource_name = self.datasource_id_to_name_mapping.get(cur_datasource_id, -1)
             # TODO: 可以放入其他辅助字段，例如后续需要持续的蹲饼时间等.
 
             if not isinstance(cur_config, int):
                 post_data_list.append({
                     'url': cur_url,
                     'config': cur_config,
+                    'datasource_name': cur_datasource_name
                 })
 
         return post_data_list
@@ -370,6 +372,13 @@ class AutoMaintainer(object):
                 cur_config = json.loads(cur_config)
 
             self.datasource_id_to_config_mapping[cur_id] = cur_config
+
+        # id找名字
+        for idx in range(fetcher_datasource_config_df.shape[0]):
+            cur_id = fetcher_datasource_config_df.iloc[idx]['id']
+            cur_name = fetcher_datasource_config_df.iloc[idx]['nickname']
+
+            self.datasource_id_to_name_mapping[cur_id] = cur_name
 
         # fetcher_config_df -> self.live_number_to_datasource_id_to_fetcher_count_mapping
         # 取出每个存活蹲饼器的数量列表
@@ -416,8 +425,8 @@ class AutoMaintainer(object):
             pending_datasource_id_list = list(self.datasource_id_to_config_mapping.keys())
 
             # 调试阶段调整
-            return []
-            # return pending_datasource_id_list
+            # return []
+            return pending_datasource_id_list
 
         X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * \
                                                                  self.interval_seconds * \
