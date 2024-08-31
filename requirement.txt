@@ -10,7 +10,9 @@ SQLAlchemy==1.4.22
 tqdm
 xlrd
 
-scikit-learn==1.5.1
+scikit-learn==1.2.2
+scipy==1.14.0
+
 numpy==1.26.4
 
 joblib==1.4.2
