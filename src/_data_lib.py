@@ -425,8 +425,8 @@ class AutoMaintainer(object):
             pending_datasource_id_list = list(self.datasource_id_to_config_mapping.keys())
 
             # 调试阶段调整
-            # return []
-            return pending_datasource_id_list
+            return []
+            # return pending_datasource_id_list
 
         X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * \
                                                                  self.interval_seconds * \
