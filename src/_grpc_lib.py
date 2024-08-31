@@ -11,12 +11,14 @@ import Ceobe_Proto.pb.log_pb2 as pb2
 import Ceobe_Proto.pb.log_pb2_grpc as pb2_grpc
 from concurrent import futures # grpc线程包
 
+from src._conf_lib import CONFIG
+
 
 class MessagerGRPC(object):
 
     def __init__(self):
         # 定义频道
-        conn = grpc.insecure_channel('127.0.0.1:5000')
+        conn = grpc.insecure_channel("{}".format(CONFIG['BOT_GRPC']['BASE_URL']))
         self.client = pb2_grpc.LogStub(channel=conn)
 
     def send_to_bot(self, info_dict):

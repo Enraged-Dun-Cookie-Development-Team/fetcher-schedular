@@ -15,5 +15,8 @@
             "port": 12345
       },
       "warning_timeout": 150,
-      "remove_timeout": 300
+      "remove_timeout": 300,
+      "bot_grpc":{
+        "base_url": "127.0.0.1:5000"
+      }
 }
