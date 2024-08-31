@@ -306,6 +306,7 @@ class AutoMaintainer(object):
 
         :param pending_datasources_id_list: 需要蹲饼的datasource_id
         """
+
         post_data_list = []
 
         # 当前可用的蹲饼器，给个序号. fetcher_config表里的蹲饼器编号是1开始的。
@@ -413,7 +414,10 @@ class AutoMaintainer(object):
         # print('?' * 20, self._model_predicted_result_pool)
         if self._model_predicted_result_pool is None:
             pending_datasource_id_list = list(self.datasource_id_to_config_mapping.keys())
-            return pending_datasource_id_list
+
+            # 调试阶段调整
+            return []
+            # return pending_datasource_id_list
 
         X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * \
                                                                  self.interval_seconds * \
