@@ -64,6 +64,8 @@ class FeatureProcesser:
                                                          second=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['SECOND'],
                                                          microsecond=0)
 
+        # 改为部署时预测一次.
+        # scheduled_time = datetime.datetime.now()
         # # 如果当前时间已经过了今天的凌晨4点，那么将定时任务时间设置为明天的凌晨4点
         # if datetime.datetime.now() > scheduled_time:
         #     scheduled_time += datetime.timedelta(days=1)

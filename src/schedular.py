@@ -472,6 +472,8 @@ if __name__ == '__main__':
 
     application.listen(CONFIG['SCHEDULAR']['PORT'], address=CONFIG['SCHEDULAR']['HOST'])
 
+    # 服务启动时预测一次.
+    # auto_maintainer.daily_model_predict()
     # 每日预测任务
     daily_scheduler = BackgroundScheduler()  
     daily_scheduler.add_job(auto_maintainer.daily_model_predict, 'cron',

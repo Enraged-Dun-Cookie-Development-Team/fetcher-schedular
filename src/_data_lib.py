@@ -298,7 +298,7 @@ class AutoMaintainer(object):
         """
         X_list = feat_processer.feature_combine()
 
-        predicted_result = self.model.predict(X_list)
+        predicted_result = self.model.predict_proba(X_list)[:, 1]
 
         self._set_model_predicted_result_pool(X_list, predicted_result)
 
@@ -323,9 +323,13 @@ class AutoMaintainer(object):
         # 当前数量下的所有fetcher的配置。
         fetcher_config_pool_of_live_num = self.live_number_to_datasource_id_to_fetcher_count_mapping[alive_fetcher_num]
 
+        # print('当前活跃数量的蹲饼器的配置表:', fetcher_config_pool_of_live_num)
+
         for cur_datasource_id in pending_datasources_id_list:
 
             # 蹲饼器序号
+            if cur_datasource_id not in fetcher_config_pool_of_live_num:
+                continue
             cur_fetcher_count = fetcher_config_pool_of_live_num[cur_datasource_id]
             # 当前蹲饼器的id, 用于索引url.
             cur_fetcher_id = fetcher_dict[cur_fetcher_count % alive_fetcher_num + 1]
@@ -395,7 +399,7 @@ class AutoMaintainer(object):
         """
         把预测结果和原始输入，整合成方便查找蹲饼时间和对应数据源的形式。
         """
-        X_list['predicted_y'] = predicted_result
+        X_list['predicted_y'] = predicted_result > 0.99999
 
         X_list.columns = ['datasource', '1', '2', '3', '4', 'year', 'month', 'day', 'hour', 'minute', 'second', '11', 'predicted_y']
         
@@ -403,6 +407,15 @@ class AutoMaintainer(object):
 
         # 使用.dt.strftime()将日期时间对象格式化为字符串
         X_list['datetime_str'] = X_list['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        X_list = X_list[X_list['datasource'] < 33].reset_index(drop=True)
+
+        # debug
+        print('未来一天的预测结果')
+
+        a = len(set(X_list[X_list['predicted_y'] == 1]['datetime_str'].tolist()))
+        # print(a)
+        messager.send_to_bot(
+            info_dict={'info': '{} '.format(datetime.datetime.now()) + str({'启动时预测当天可能有饼的时间点数量': a})})
 
         self._model_predicted_result_pool = X_list
 
@@ -416,8 +429,8 @@ class AutoMaintainer(object):
       
             end_time = datetime.datetime.strptime(end_time, date_format)
         
-        # 从4点过去，经过了多少个小时
-        cur_hour_offset = max((end_time.hour + 24 - 4) % 24, 1)
+        # 从3点过去，经过了多少个小时
+        cur_hour_offset = max((end_time.hour + 24 - 3) % 24, 1)
 
         # 初始化，没有开始预测的时候：
         # print('?' * 20, self._model_predicted_result_pool)
@@ -434,6 +447,9 @@ class AutoMaintainer(object):
                     (cur_hour_offset + 1) * self.interval_seconds * self.datasource_num * 3600
                     ].reset_index(drop=True)
 
+        # print('^^^^^' * 4 + ' X_list_filtered')
+        # print(X_list_filtered)
+
         # 设置窗口长度
         if not time_window_seconds:
             time_window_seconds = 5
@@ -448,10 +464,16 @@ class AutoMaintainer(object):
         target_df = X_list_filtered[
             np.logical_and(X_list_filtered['datetime_str'] >= start_time,
                           X_list_filtered['datetime_str'] <= end_time)]
-        
+
+        # print('*****' * 4 + ' target_df')
+        # print(target_df)
+
         pending_datasource_stats_df = target_df.groupby('datasource')['predicted_y'].sum()
         pending_datasource_stats_df = pending_datasource_stats_df[pending_datasource_stats_df > 0].reset_index()
-        
+
+        # print('%%%%%' * 4 + ' pending_datasource_stats_df')
+
+        # print(pending_datasource_stats_df)
         pending_datasource_id_list = MODEL_DICT['datasource_encoder'].inverse_transform(pending_datasource_stats_df['datasource'].tolist())
         pending_datasource_id_list = list(pending_datasource_id_list)
 
