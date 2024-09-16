@@ -279,9 +279,12 @@ class AutoMaintainer(object):
         # 后面改成配置
         self.datasource_num = 24
 
-        # 准备就绪，bot发送指令
-        messager.send_to_bot(
-            info_dict={'info': '{}: '.format(datetime.datetime.now()) + 'auto sche started'})
+        try:
+            # 准备就绪，bot发送指令
+            messager.send_to_bot(
+                info_dict={'info': '{}: '.format(datetime.datetime.now()) + 'auto sche started'})
+        except:
+            print('grpc 没发出去')
 
     def activate_send_request(self, maintainer:Maintainer):
         """
