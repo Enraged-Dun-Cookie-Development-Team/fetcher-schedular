@@ -20,9 +20,14 @@ from src._conf_lib import CONFIG
 class MessagerGRPC(object):
 
     def __init__(self):
+
         # 定义频道
-        conn = grpc.insecure_channel("{}".format(CONFIG['BOT_GRPC']['BASE_URL']))
-        self.client = pb2_grpc.LogStub(channel=conn)
+        try:
+            conn = grpc.insecure_channel("{}".format(CONFIG['BOT_GRPC']['BASE_URL']),
+                                     options=[('grpc.default_timeout_ms', 2000)])
+            self.client = pb2_grpc.LogStub(channel=conn)
+        except:
+            self.client = None
 
     def send_to_bot(self, info_dict):
 
