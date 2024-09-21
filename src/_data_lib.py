@@ -303,9 +303,50 @@ class AutoMaintainer(object):
         """
         每日更新模型全量预测结果
         """
+
         X_list = feat_processer.feature_combine()
 
-        predicted_result = self.model.predict_proba(X_list)[:, 1]
+        import psutil
+        import time
+
+        stop_counts = 0
+
+        def limit_cpu(interval):
+            global stop_counts
+            p = psutil.Process()
+            while True:
+                cpu_usage = p.cpu_percent(interval=interval)
+
+                # 发送cpu 使用率监控 到bot.
+                messager.send_to_bot(
+                    info_dict={'info': '{} '.format(datetime.datetime.now()) +
+                                       str({'cpu使用率：': cpu_usage})})
+
+                if cpu_usage > 30:  # 如果CPU使用率超过40%
+                    time.sleep(interval)  # 暂停一小段时间
+                    stop_counts += 1
+                else:
+                    break
+
+        start_time = time.time()
+        # 在预测过程中定期调用此函数
+        predictions = []
+        batch_size = 100000
+        interval = 5e-5
+        for i in range(0, len(X_list), batch_size):
+            batch = X_list[i:i + batch_size]
+            batch_predictions = self.model.predict(batch)
+            predictions.extend(batch_predictions)
+            limit_cpu(interval)
+
+        stop_time = time.time()
+
+        messager.send_to_bot(
+            info_dict={'info': '{} '.format(datetime.datetime.now()) +
+                               str({'模型预测消耗时间：': stop_time - start_time})})
+
+        predicted_result = predictions
+        # predicted_result = self.model.predict_proba(X_list)[:, 1]
 
         self._set_model_predicted_result_pool(X_list, predicted_result)
 
@@ -406,7 +447,7 @@ class AutoMaintainer(object):
         """
         把预测结果和原始输入，整合成方便查找蹲饼时间和对应数据源的形式。
         """
-        X_list['predicted_y'] = predicted_result > 0.99999
+        X_list['predicted_y'] = np.array(predicted_result) > 0.99999
 
         X_list.columns = ['datasource', '1', '2', '3', '4', 'year', 'month', 'day', 'hour', 'minute', 'second', '11', 'predicted_y']
         
