@@ -2,6 +2,7 @@ import os
 import json
 import sys
 import traceback
+import datetime
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 sys.path.append(os.path.dirname(os.path.dirname(__file__)) + '/Ceobe_Proto')
@@ -46,6 +47,11 @@ class MessagerGRPC(object):
             extra=extra
         ))
         return response
+
+    def send_to_bot_shortcut(self, obj):
+        # 发送info至bot的默认封装。
+        self.send_to_bot(
+            info_dict={'info': '{} '.format(datetime.datetime.now()) + str(obj)})
 
 
 messager = MessagerGRPC()

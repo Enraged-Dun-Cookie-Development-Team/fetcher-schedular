@@ -15,6 +15,8 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+from src._grpc_lib import messager
+
 
 class FeatureProcesser:
 
@@ -26,8 +28,11 @@ class FeatureProcesser:
         X_list = []
         feature_num = 12
         datasource_num = AUTO_SCHE_CONFIG['DATASOURCE_POSSIBLE_NUMS'] # 域内实际出现过的蹲饼器编号数量.
-        time_points = self.feature_of_time()
+        messager.send_to_bot_shortcut('适配的的数据源数量：{}'.format(datasource_num))
+        messager.send_to_bot_shortcut('开始梳理时间相关的特征')
 
+        time_points = self.feature_of_time()
+        messager.send_to_bot_shortcut('梳理时间相关的特征完成')
         for t in tqdm(time_points):
             cur_feature = np.zeros([datasource_num, feature_num], dtype=int)
 
@@ -55,6 +60,9 @@ class FeatureProcesser:
                           'minute',
                           'second',
                           'weekday_encoded']
+
+        messager.send_to_bot_shortcut('完整的特征形状')
+        messager.send_to_bot_shortcut(X_list.shape)
 
         return X_list
 
