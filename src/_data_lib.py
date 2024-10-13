@@ -335,12 +335,12 @@ class AutoMaintainer(object):
             start_time = time.time()
             # 在预测过程中定期调用此函数
             predictions = []
-            batch_size = 10000
+            batch_size = 1000
             interval = 0.005
             messager.send_to_bot_shortcut('开始预测')
 
             for i in range(0, len(X_list), batch_size):
-                time.sleep(0.005)
+                time.sleep(0.02)
                 batch = X_list[i:i + batch_size]
                 batch_predictions = self.model.predict(batch)
                 predictions.extend(batch_predictions)
