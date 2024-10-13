@@ -326,7 +326,7 @@ class AutoMaintainer(object):
                         info_dict={'info': '{} '.format(datetime.datetime.now()) +
                                            str({'cpu使用率：': cpu_usage})})
 
-                    if cpu_usage > 30:  # 如果CPU使用率超过40%
+                    if cpu_usage > 20:  # 如果CPU使用率超过40%
                         time.sleep(interval)  # 暂停一小段时间
                         stop_counts += 1
                     else:
@@ -335,11 +335,12 @@ class AutoMaintainer(object):
             start_time = time.time()
             # 在预测过程中定期调用此函数
             predictions = []
-            batch_size = 100000
-            interval = 5e-5
+            batch_size = 10000
+            interval = 0.005
             messager.send_to_bot_shortcut('开始预测')
 
             for i in range(0, len(X_list), batch_size):
+                time.sleep(0.005)
                 batch = X_list[i:i + batch_size]
                 batch_predictions = self.model.predict(batch)
                 predictions.extend(batch_predictions)
@@ -361,6 +362,7 @@ class AutoMaintainer(object):
             self._set_model_predicted_result_pool(X_list, predicted_result)
         except Exception as e:
             # 打印报错
+            messager.send_to_bot_shortcut('出现报错，详细信息为:')
             messager.send_to_bot_shortcut(str(e))
 
     def get_post_data_list(self, pending_datasources_id_list, maintainer:Maintainer):
@@ -461,14 +463,21 @@ class AutoMaintainer(object):
         把预测结果和原始输入，整合成方便查找蹲饼时间和对应数据源的形式。
         """
         X_list['predicted_y'] = np.array(predicted_result) > 0.99999
+        messager.send_to_bot_shortcut('将预测结果与特征完成拼接，完整形状为：')
+        messager.send_to_bot_shortcut(X_list.shape)
 
         X_list.columns = ['datasource', '1', '2', '3', '4', 'year', 'month', 'day', 'hour', 'minute', 'second', '11', 'predicted_y']
         
         X_list['datetime'] = pd.to_datetime(X_list[['year', 'month', 'day', 'hour', 'minute', 'second']])
+        messager.send_to_bot_shortcut('完成时间戳转换')
 
         # 使用.dt.strftime()将日期时间对象格式化为字符串
         X_list['datetime_str'] = X_list['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+        messager.send_to_bot_shortcut('完成时间戳字符串化')
+
         X_list = X_list[X_list['datasource'] < 33].reset_index(drop=True)
+        messager.send_to_bot_shortcut('完成datasource筛选')
 
         # debug
         print('未来一天的预测结果')

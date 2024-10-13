@@ -33,7 +33,15 @@ class FeatureProcesser:
 
         time_points = self.feature_of_time()
         messager.send_to_bot_shortcut('梳理时间相关的特征完成')
-        for t in tqdm(time_points):
+
+        time_points_nums = len(time_points)
+
+        for t_idx, t in tqdm(enumerate(time_points)):
+
+            # 打印10次中间过程。
+            if t_idx % (time_points_nums // 10) == 0:
+                messager.send_to_bot_shortcut('合成最终特征中，进度{}/{}'.format(t_idx, time_points_nums))
+
             cur_feature = np.zeros([datasource_num, feature_num], dtype=int)
 
             # datasource_encoded
