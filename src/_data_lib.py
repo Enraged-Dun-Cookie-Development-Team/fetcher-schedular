@@ -313,10 +313,7 @@ class AutoMaintainer(object):
             import psutil
             import time
 
-            stop_counts = 0
-
             def limit_cpu(interval):
-                global stop_counts
                 p = psutil.Process()
                 while True:
                     cpu_usage = p.cpu_percent(interval=interval)
@@ -328,7 +325,6 @@ class AutoMaintainer(object):
 
                     if cpu_usage > 20:  # 如果CPU使用率超过40%
                         time.sleep(interval)  # 暂停一小段时间
-                        stop_counts += 1
                     else:
                         break
 
