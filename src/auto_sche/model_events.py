@@ -87,7 +87,7 @@ class FeatureProcesser:
         #     scheduled_time += datetime.timedelta(days=1)
 
         # 生成未来24小时的时间点，从凌晨4点开始，到凌晨4点结束（不包括）
-        end_time = scheduled_time + datetime.timedelta(hours=2)
+        end_time = scheduled_time + datetime.timedelta(days=1)
         time_points = self._generate_time_points(scheduled_time, end_time)
 
         return time_points
