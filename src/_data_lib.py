@@ -336,7 +336,7 @@ class AutoMaintainer(object):
             messager.send_to_bot_shortcut('开始预测')
 
             for i in range(0, len(X_list), batch_size):
-                time.sleep(0.02)
+                time.sleep(0.05)
                 batch = X_list[i:i + batch_size]
                 batch_predictions = self.model.predict(batch)
                 predictions.extend(batch_predictions)
