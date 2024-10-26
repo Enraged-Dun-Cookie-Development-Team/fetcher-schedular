@@ -10,11 +10,13 @@ import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from src.auto_sche.model_loader import MODEL_DICT
+from src._log_lib import get_memory_usage
 from src._conf_lib import AUTO_SCHE_CONFIG
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+import psutil
 from src._grpc_lib import messager
 
 
@@ -28,11 +30,14 @@ class FeatureProcesser:
         X_list = []
         feature_num = 12
         datasource_num = AUTO_SCHE_CONFIG['DATASOURCE_POSSIBLE_NUMS'] # 域内实际出现过的蹲饼器编号数量.
+        messager.send_to_bot_shortcut('开始特征工程时的内存：{}'.format(get_memory_usage()))
         messager.send_to_bot_shortcut('适配的的数据源数量：{}'.format(datasource_num))
         messager.send_to_bot_shortcut('开始梳理时间相关的特征')
+        messager.send_to_bot_shortcut('开始梳理时间相关的特征 内存：{}'.format(get_memory_usage()))
 
         time_points = self.feature_of_time()
         messager.send_to_bot_shortcut('梳理时间相关的特征完成')
+        messager.send_to_bot_shortcut('梳理时间相关的特征完成 内存：{}'.format(get_memory_usage()))
 
         time_points_nums = len(time_points)
 
@@ -41,6 +46,7 @@ class FeatureProcesser:
             # 打印10次中间过程。
             if t_idx % (time_points_nums // 10) == 0:
                 messager.send_to_bot_shortcut('合成最终特征中，进度{}/{}'.format(t_idx, time_points_nums))
+                messager.send_to_bot_shortcut('内存：{}'.format(get_memory_usage()))
 
             cur_feature = np.zeros([datasource_num, feature_num], dtype=int)
 
@@ -55,7 +61,8 @@ class FeatureProcesser:
         
         # 组织成dataframe用于模型输入.
         X_list = pd.DataFrame(np.concatenate(X_list))
-        
+        messager.send_to_bot_shortcut('全部特征输入模型前 内存：{}'.format(get_memory_usage()))
+
         X_list.columns = ['datasource_encoded',
                           'is_top',
                           'is_retweeted',
