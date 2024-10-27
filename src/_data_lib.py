@@ -466,12 +466,15 @@ class AutoMaintainer(object):
         X_list.columns = ['datasource', '1', '2', '3', '4', 'year', 'month', 'day', 'hour', 'minute', 'second', '11']
 
         # 去掉所有无关数据
-        X_list = X_list[['datasource', 'year', 'month', 'day', 'hour', 'minute', 'second']]
+        # X_list = X_list[['datasource', 'year', 'month', 'day', 'hour', 'minute', 'second']]
+        del X_list['1'], X_list['2'], X_list['3'], X_list['4'], X_list['11']
 
         X_list['datetime'] = pd.to_datetime(X_list[['year', 'month', 'day', 'hour', 'minute', 'second']])
 
         # 去掉所有无关数据
-        X_list = X_list[['datasource', 'datetime']]
+        del X_list['year'], X_list['month'], X_list['day'], X_list['hour'], X_list['minute'], X_list['second']
+
+        # X_list = X_list[['datasource', 'datetime']]
 
         messager.send_to_bot_shortcut('完成时间戳转换')
         messager.send_to_bot_shortcut('完成时间戳转换 内存：{}'.format(get_memory_usage()))
@@ -503,7 +506,7 @@ class AutoMaintainer(object):
 
             X_list.loc[start_index:end_index, 'datetime_str'] = X_list.loc[start_index:end_index,
                                                                 'datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
-
+            X_list.loc[start_index:end_index, 'datetime'] = None
         # # 使用.dt.strftime()将日期时间对象格式化为字符串
         # X_list['datetime_str'] = X_list['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -511,7 +514,7 @@ class AutoMaintainer(object):
         messager.send_to_bot_shortcut('完成时间戳字符串化 内存：{}'.format(get_memory_usage()))
 
         # 再去掉所有无关数据
-        X_list = X_list[['datasource', 'datetime_str', 'predicted_y']]
+        del X_list['datetime']
 
         messager.send_to_bot_shortcut('把无关列精简掉 内存：{}'.format(get_memory_usage()))
 
