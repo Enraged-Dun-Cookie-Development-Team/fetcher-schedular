@@ -339,15 +339,15 @@ class AutoMaintainer(object):
                 time.sleep(0.05)
                 batch = X_list[i:i + batch_size]
                 batch_predictions = self.model.predict(batch)
-                if i % 100 == 0:
+                if i % 10000 == 0:
                     messager.send_to_bot_shortcut('预测中，批次{} 内存：{}'.format(i, get_memory_usage()))
+                    limit_cpu(interval)
 
                 predictions.extend(batch_predictions)
                 if i == 0:
                     messager.send_to_bot_shortcut('预测结果第一批样例形状：')
                     messager.send_to_bot_shortcut(batch_predictions.shape)
 
-                limit_cpu(interval)
 
             stop_time = time.time()
 
@@ -461,25 +461,51 @@ class AutoMaintainer(object):
         """
         把预测结果和原始输入，整合成方便查找蹲饼时间和对应数据源的形式。
         """
-        messager.send_to_bot_shortcut('开始后处理，将预测结果与输入拼接 内存：{}'.format(get_memory_usage()))
+        messager.send_to_bot_shortcut('开始后处理，内存：{}'.format(get_memory_usage()))
+
+        X_list.columns = ['datasource', '1', '2', '3', '4', 'year', 'month', 'day', 'hour', 'minute', 'second', '11']
+
+        # 去掉所有无关数据
+        X_list = X_list[['datasource', 'year', 'month', 'day', 'hour', 'minute', 'second']]
+
+        X_list['datetime'] = pd.to_datetime(X_list[['year', 'month', 'day', 'hour', 'minute', 'second']])
+
+        # 去掉所有无关数据
+        X_list = X_list[['datasource', 'datetime']]
+
+        messager.send_to_bot_shortcut('完成时间戳转换')
+        messager.send_to_bot_shortcut('完成时间戳转换 内存：{}'.format(get_memory_usage()))
 
         X_list['predicted_y'] = np.array(predicted_result) > 0.99999
+        del predicted_result
+
         messager.send_to_bot_shortcut('将预测结果与特征完成拼接，完整形状为：')
         messager.send_to_bot_shortcut(X_list.shape)
         messager.send_to_bot_shortcut('预测结果与输入完成拼接 内存：{}'.format(get_memory_usage()))
 
-        X_list.columns = ['datasource', '1', '2', '3', '4', 'year', 'month', 'day', 'hour', 'minute', 'second', '11', 'predicted_y']
+        # 放置一个空 datetime_str 进来
+        X_list['datetime_str'] = ''
+        # 计算每个批次的大小
+        batch_size = len(X_list) // 1000
 
-        # 去掉所有无关数据
-        X_list = X_list[['datasource', 'year', 'month', 'day', 'hour', 'minute', 'second', 'predicted_y']]
+        # 处理每个批次
+        for i in range(1000):
 
+            if i % 10 == 0:
+                messager.send_to_bot_shortcut('时间戳转换字符串批次{} 内存：{}'.format(i, get_memory_usage()))
 
-        X_list['datetime'] = pd.to_datetime(X_list[['year', 'month', 'day', 'hour', 'minute', 'second']])
-        messager.send_to_bot_shortcut('完成时间戳转换')
-        messager.send_to_bot_shortcut('完成时间戳转换 内存：{}'.format(get_memory_usage()))
+            start_index = i * batch_size
+            # 确保最后一个批次包含所有剩余的行
+            if i == 999:
+                end_index = len(X_list)
+            else:
+                end_index = (i + 1) * batch_size
 
-        # 使用.dt.strftime()将日期时间对象格式化为字符串
-        X_list['datetime_str'] = X_list['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+            X_list.loc[start_index:end_index, 'datetime_str'] = X_list.loc[start_index:end_index,
+                                                                'datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+        # # 使用.dt.strftime()将日期时间对象格式化为字符串
+        # X_list['datetime_str'] = X_list['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
         messager.send_to_bot_shortcut('完成时间戳字符串化')
         messager.send_to_bot_shortcut('完成时间戳字符串化 内存：{}'.format(get_memory_usage()))
