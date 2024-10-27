@@ -469,7 +469,11 @@ class AutoMaintainer(object):
         messager.send_to_bot_shortcut('预测结果与输入完成拼接 内存：{}'.format(get_memory_usage()))
 
         X_list.columns = ['datasource', '1', '2', '3', '4', 'year', 'month', 'day', 'hour', 'minute', 'second', '11', 'predicted_y']
-        
+
+        # 去掉所有无关数据
+        X_list = X_list[['datasource', 'year', 'month', 'day', 'hour', 'minute', 'second', 'predicted_y']]
+
+
         X_list['datetime'] = pd.to_datetime(X_list[['year', 'month', 'day', 'hour', 'minute', 'second']])
         messager.send_to_bot_shortcut('完成时间戳转换')
         messager.send_to_bot_shortcut('完成时间戳转换 内存：{}'.format(get_memory_usage()))
@@ -478,9 +482,17 @@ class AutoMaintainer(object):
         X_list['datetime_str'] = X_list['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
         messager.send_to_bot_shortcut('完成时间戳字符串化')
+        messager.send_to_bot_shortcut('完成时间戳字符串化 内存：{}'.format(get_memory_usage()))
+
+        # 再去掉所有无关数据
+        X_list = X_list[['datasource', 'datetime_str', 'predicted_y']]
+
+        messager.send_to_bot_shortcut('把无关列精简掉 内存：{}'.format(get_memory_usage()))
 
         X_list = X_list[X_list['datasource'] < 33].reset_index(drop=True)
         messager.send_to_bot_shortcut('完成datasource筛选')
+
+
 
         # debug
         print('未来一天的预测结果')
