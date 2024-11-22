@@ -26,8 +26,8 @@ class FeatureProcesser:
         pass
 
     def feature_combine(self):
-        # 需要处理：12个feature
         X_list = []
+        # 需要处理：12个feature
         feature_num = 12
         datasource_num = AUTO_SCHE_CONFIG['DATASOURCE_POSSIBLE_NUMS'] # 域内实际出现过的蹲饼器编号数量.
         messager.send_to_bot_shortcut('开始特征工程时的内存：{}'.format(get_memory_usage()))
@@ -94,7 +94,7 @@ class FeatureProcesser:
         #     scheduled_time += datetime.timedelta(days=1)
 
         # 生成未来24小时的时间点，从凌晨4点开始，到凌晨4点结束（不包括）
-        end_time = scheduled_time + datetime.timedelta(days=1)
+        end_time = scheduled_time + datetime.timedelta(hours=1)
         time_points = self._generate_time_points(scheduled_time, end_time)
 
         return time_points
