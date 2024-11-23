@@ -312,6 +312,7 @@ class AutoMaintainer(object):
         每日更新模型全量预测结果
         """
         # 拆成24个小时的数据运行
+        self._model_predicted_result_pool = []
         for i in range(24):
             try:
                 # debug
