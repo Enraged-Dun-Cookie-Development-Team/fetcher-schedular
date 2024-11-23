@@ -5,6 +5,7 @@ import traceback
 import datetime
 import json
 import numpy as np
+import gc
 
 from collections import defaultdict
 import traceback
@@ -21,6 +22,12 @@ from src.auto_sche.model_events import feat_processer
 
 # 打日志
 from src._grpc_lib import messager
+
+import tracemalloc
+
+tracemalloc.start()
+snapshot1 = tracemalloc.take_snapshot()
+
 
 class Maintainer(object):
     '''
@@ -273,7 +280,7 @@ class AutoMaintainer(object):
         # self.set_config_mappings()
 
         # 存储每天模型预测的结果
-        self._model_predicted_result_pool = None
+        self._model_predicted_result_pool = []
         
         # 后面改成配置
         self.interval_seconds = 1
@@ -304,65 +311,70 @@ class AutoMaintainer(object):
         """
         每日更新模型全量预测结果
         """
-        try:
-            # debug
-            messager.send_to_bot_shortcut('开始整理输入特征')
-            X_list = feat_processer.feature_combine()
-            messager.send_to_bot_shortcut('输入特征整理完成')
+        # 拆成24个小时的数据运行
+        self._model_predicted_result_pool = []
+        for i in range(24):
+            try:
+                # debug
 
-            import psutil
-            import time
+                messager.send_to_bot_shortcut('开始整理输入特征')
+                X_list = feat_processer.feature_combine()
+                messager.send_to_bot_shortcut('输入特征整理完成')
 
-            def limit_cpu(interval):
-                p = psutil.Process()
-                while True:
-                    cpu_usage = p.cpu_percent(interval=interval)
+                import psutil
+                import time
 
-                    # 发送cpu 使用率监控 到bot.
-                    messager.send_to_bot(
-                        info_dict={'info': '{} '.format(datetime.datetime.now()) +
-                                           str({'cpu使用率：': cpu_usage})})
+                def limit_cpu(interval):
+                    p = psutil.Process()
+                    while True:
+                        cpu_usage = p.cpu_percent(interval=interval)
 
-                    if cpu_usage > 20:  # 如果CPU使用率超过40%
-                        time.sleep(interval)  # 暂停一小段时间
-                    else:
-                        break
+                        # # 发送cpu 使用率监控 到bot.
+                        # messager.send_to_bot(
+                        #     info_dict={'info': '{} '.format(datetime.datetime.now()) +
+                        #                        str({'cpu使用率：': cpu_usage})})
 
-            start_time = time.time()
-            # 在预测过程中定期调用此函数
-            predictions = []
-            batch_size = 1000
-            interval = 0.005
-            messager.send_to_bot_shortcut('开始预测')
+                        if cpu_usage > 20:  # 如果CPU使用率超过40%
+                            time.sleep(interval)  # 暂停一小段时间
+                        else:
+                            break
 
-            for i in range(0, len(X_list), batch_size):
-                time.sleep(0.05)
-                batch = X_list[i:i + batch_size]
-                batch_predictions = self.model.predict(batch)
-                if i % 10000 == 0:
-                    messager.send_to_bot_shortcut('预测中，批次{} 内存：{}'.format(i, get_memory_usage()))
-                    limit_cpu(interval)
+                start_time = time.time()
+                # 在预测过程中定期调用此函数
+                predictions = []
+                batch_size = 1000
+                interval = 0.005
+                messager.send_to_bot_shortcut('开始预测')
 
-                predictions.extend(batch_predictions)
-                if i == 0:
-                    messager.send_to_bot_shortcut('预测结果第一批样例形状：')
-                    messager.send_to_bot_shortcut(batch_predictions.shape)
+                for i in range(0, len(X_list), batch_size):
+                    time.sleep(0.05)
+                    batch = X_list[i:i + batch_size]
+                    batch_predictions = self.model.predict(batch)
+                    if i % 100000 == 0:
+                        gc.collect()
+                        messager.send_to_bot_shortcut('预测中，批次{} 内存：{}'.format(i, get_memory_usage()))
+                        limit_cpu(interval)
 
+                    predictions.extend(batch_predictions)
+                    if i == 0:
+                        messager.send_to_bot_shortcut('预测结果第一批样例形状：')
+                        messager.send_to_bot_shortcut(batch_predictions.shape)
 
-            stop_time = time.time()
+                    del batch
 
-            messager.send_to_bot(
-                info_dict={'info': '{} '.format(datetime.datetime.now()) +
-                                   str({'模型预测消耗时间：': stop_time - start_time})})
+                stop_time = time.time()
 
-            predicted_result = predictions
-            # predicted_result = self.model.predict_proba(X_list)[:, 1]
+                messager.send_to_bot(
+                    info_dict={'info': '{} '.format(datetime.datetime.now()) +
+                                       str({'模型预测消耗时间：': stop_time - start_time})})
 
-            self._set_model_predicted_result_pool(X_list, predicted_result)
-        except Exception as e:
-            # 打印报错
-            messager.send_to_bot_shortcut('出现报错，详细信息为:')
-            messager.send_to_bot_shortcut(str(e))
+                # predicted_result = self.model.predict_proba(X_list)[:, 1]
+
+                self._set_model_predicted_result_pool(X_list, predictions)
+            except Exception as e:
+                # 打印报错
+                messager.send_to_bot_shortcut('出现报错，详细信息为:')
+                messager.send_to_bot_shortcut(str(e))
 
     def get_post_data_list(self, pending_datasources_id_list, maintainer:Maintainer):
         """
@@ -469,18 +481,37 @@ class AutoMaintainer(object):
         # X_list = X_list[['datasource', 'year', 'month', 'day', 'hour', 'minute', 'second']]
         del X_list['1'], X_list['2'], X_list['3'], X_list['4'], X_list['11']
 
-        X_list['datetime'] = pd.to_datetime(X_list[['year', 'month', 'day', 'hour', 'minute', 'second']])
+        # for c in ['year', 'month', 'day', 'hour', 'minute', 'second']:
+        #     X_list[c] = X_list[c].astype('int8')
+
+        X_list['datetime'] = pd.to_datetime(
+          X_list.loc[:, 'year': 'second'])# .astype('datetime64[ns]')
+
+        # X_list.to_csv('./tmp.csv', index=False)
+        # del X_list
+        gc.collect()
+
+        # snapshot2 = tracemalloc.take_snapshot()
+        # top_stats = snapshot2.compare_to(snapshot1, 'lineno') # statistics('lineno')
+
+        # print("[ Top 10 ]")
+        # for stat in top_stats[:30]:
+        #     print(stat)
+
+        messager.send_to_bot_shortcut('整体删除X_list 内存：{}'.format(get_memory_usage()))
 
         # 去掉所有无关数据
-        del X_list['year'], X_list['month'], X_list['day'], X_list['hour'], X_list['minute'], X_list['second']
+        # del X_list['year'], X_list['month'], X_list['day'], X_list['hour'], X_list['minute'], X_list['second']
+        X_list.drop(columns=['year', 'month', 'day', 'hour', 'minute', 'second'], inplace=True)
 
         # X_list = X_list[['datasource', 'datetime']]
-
+        gc.collect()
         messager.send_to_bot_shortcut('完成时间戳转换')
         messager.send_to_bot_shortcut('完成时间戳转换 内存：{}'.format(get_memory_usage()))
-
+        print(X_list.info(memory_usage='deep'))
         X_list['predicted_y'] = np.array(predicted_result) > 0.99999
         del predicted_result
+        gc.collect()
 
         messager.send_to_bot_shortcut('将预测结果与特征完成拼接，完整形状为：')
         messager.send_to_bot_shortcut(X_list.shape)
@@ -495,6 +526,7 @@ class AutoMaintainer(object):
         for i in range(1000):
 
             if i % 10 == 0:
+                gc.collect()
                 messager.send_to_bot_shortcut('时间戳转换字符串批次{} 内存：{}'.format(i, get_memory_usage()))
 
             start_index = i * batch_size
@@ -521,7 +553,7 @@ class AutoMaintainer(object):
         X_list = X_list[X_list['datasource'] < 33].reset_index(drop=True)
         messager.send_to_bot_shortcut('完成datasource筛选')
 
-
+        gc.collect()
 
         # debug
         print('未来一天的预测结果')
@@ -531,7 +563,10 @@ class AutoMaintainer(object):
         messager.send_to_bot(
             info_dict={'info': '{} '.format(datetime.datetime.now()) + str({'启动时预测当天可能有饼的时间点数量': a})})
 
-        self._model_predicted_result_pool = X_list
+        # 旧：一次性存储一天所有数据
+        # self._model_predicted_result_pool = X_list
+        # 新：每次存储1小时的数据
+        self._model_predicted_result_pool.append(X_list)
 
     def get_pending_datasources(self,  end_time=None, time_window_seconds=None):
         
