@@ -481,6 +481,7 @@ if __name__ == '__main__':
                             minute=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['MINUTE'])
     daily_scheduler.start()  
 
+
     # 蹲饼器健康情况监控
     ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()
     
