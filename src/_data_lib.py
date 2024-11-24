@@ -579,6 +579,7 @@ class AutoMaintainer(object):
         # self._model_predicted_result_pool = X_list
         # 新：每次存储1小时的数据
         # self._model_predicted_result_pool.append(X_list)
+        # TODO: 替换成redis写入
         X_list.to_csv('./tmp.csv', index=False)
         del X_list
 
