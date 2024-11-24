@@ -316,6 +316,7 @@ class AutoMaintainer(object):
         for i in range(24):
             try:
                 # debug
+                messager.send_to_bot_shortcut('预测第{}个小时的结果'.format(i + 1))
 
                 messager.send_to_bot_shortcut('开始整理输入特征')
                 X_list = feat_processer.feature_combine()
