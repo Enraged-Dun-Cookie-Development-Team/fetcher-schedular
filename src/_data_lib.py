@@ -311,6 +311,7 @@ class AutoMaintainer(object):
         """
         每日更新模型全量预测结果
         """
+        messager.send_to_bot_shortcut('每日更新模型全量预测结果 开始内存：{}'.format(get_memory_usage()))
         # 拆成24个小时的数据运行
         self._model_predicted_result_pool = []
         for i in range(24):
@@ -337,7 +338,9 @@ class AutoMaintainer(object):
 
                         if cpu_usage > 20:  # 如果CPU使用率超过40%
                             time.sleep(interval)  # 暂停一小段时间
+                            del cpu_usage
                         else:
+                            del cpu_usage
                             break
 
                 start_time = time.time()
@@ -355,15 +358,15 @@ class AutoMaintainer(object):
                         # gc.collect()
                         messager.send_to_bot_shortcut('预测中，批次{} 内存：{}'.format(i, get_memory_usage()))
                         limit_cpu(interval)
-
                     predictions.extend(batch_predictions)
                     if i == 0:
                         messager.send_to_bot_shortcut('预测结果第一批样例形状：')
                         messager.send_to_bot_shortcut(batch_predictions.shape)
                     
                     del batch_predictions    
-                    del batch
+
                 del interval
+                del batch_size
 
                 stop_time = time.time()
 
@@ -377,12 +380,13 @@ class AutoMaintainer(object):
 
                 self._set_model_predicted_result_pool(X_list, predictions)
                 del predictions
+                del X_list
             except Exception as e:
                 # 打印报错
                 messager.send_to_bot_shortcut('出现报错，详细信息为:')
                 messager.send_to_bot_shortcut(str(e))
         del self._model_predicted_result_pool
-        gc.collect()
+        gc.collect(2)
         messager.send_to_bot_shortcut('最终内存：{}'.format(get_memory_usage()))
 
     def get_post_data_list(self, pending_datasources_id_list, maintainer:Maintainer):
@@ -582,6 +586,7 @@ class AutoMaintainer(object):
         # TODO: 替换成redis写入
         X_list.to_csv('./tmp.csv', index=False)
         del X_list
+        gc.collect(2)
 
         messager.send_to_bot_shortcut('启动时预测当天可能有饼的时间点数量 内存：{}'.format(get_memory_usage()))
 
