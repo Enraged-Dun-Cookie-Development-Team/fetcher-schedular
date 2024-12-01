@@ -266,7 +266,7 @@ class AutoMaintainer(object):
     '''
     def __init__(self):
         self.pm = PostManager(max_workers=1)  # max=1 即为同步
-        self.model = MODEL_DICT['decision_tree_model']
+        self.model = None
 
 
         # 用[数据库里的datasource_id] 查询对应的[config].
@@ -312,6 +312,11 @@ class AutoMaintainer(object):
         每日更新模型全量预测结果
         """
         # 拆成24个小时的数据运行
+
+        # 加载模型
+        MODEL_DICT.load_model('decision_tree_model_v2', path_prefix='../')
+        self.model = MODEL_DICT['decision_tree_model']
+
         self._model_predicted_result_pool = []
         for i in range(24):
             try:
@@ -376,6 +381,10 @@ class AutoMaintainer(object):
                 # 打印报错
                 messager.send_to_bot_shortcut('出现报错，详细信息为:')
                 messager.send_to_bot_shortcut(str(e))
+
+        # 删除模型。
+        MODEL_DICT.model_dict.pop('decision_tree_model')
+        self.model = None
 
     def get_post_data_list(self, pending_datasources_id_list, maintainer:Maintainer):
         """

@@ -18,15 +18,15 @@ class ModelLoader:
 
     def load_all_model(self):
         for name in [
-            'decision_tree_model_v2',
+            # 'decision_tree_model_v2',
             'weekday_encoder_v2',
             'datasource_encoder_v2'
         ]:
             self.load_model(name)
 
-    def load_model(self, name, suffix='.joblib'):
+    def load_model(self, name, suffix='.joblib', path_prefix=''):
         # 加载模型、编码器等等
-        loaded_model = load('./ml_model/{}{}'.format(name, suffix))
+        loaded_model = load('{}./ml_model/{}{}'.format(path_prefix, name, suffix))
         self.model_dict[name.split('_v')[0]] = loaded_model
 
     def __getitem__(self, key):
