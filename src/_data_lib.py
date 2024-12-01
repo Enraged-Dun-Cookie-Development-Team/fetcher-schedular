@@ -315,7 +315,7 @@ class AutoMaintainer(object):
         # 拆成24个小时的数据运行
 
         # 加载模型
-        MODEL_DICT.load_model('decision_tree_model_v2', path_prefix='../')
+        MODEL_DICT.load_model('decision_tree_model_v2', path_prefix='./')
         self.model = MODEL_DICT['decision_tree_model']
 
         self._model_predicted_result_pool = []
@@ -391,12 +391,15 @@ class AutoMaintainer(object):
                 messager.send_to_bot_shortcut('出现报错，详细信息为:')
                 messager.send_to_bot_shortcut(str(e))
         del self._model_predicted_result_pool
-        gc.collect(2)
-        messager.send_to_bot_shortcut('最终内存：{}'.format(get_memory_usage()))
 
         # 删除模型。
         MODEL_DICT.model_dict.pop('decision_tree_model')
+        del self.model
         self.model = None
+
+        gc.collect(2)
+        messager.send_to_bot_shortcut('最终内存：{}'.format(get_memory_usage()))
+
 
     def get_post_data_list(self, pending_datasources_id_list, maintainer:Maintainer):
         """
