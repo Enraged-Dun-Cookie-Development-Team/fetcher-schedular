@@ -58,6 +58,12 @@ class FeatureProcesser:
             cur_feature[:, 11] = MODEL_DICT['weekday_encoder'].transform([self._convert_date(*t[:3])])
 
             X_list.append(cur_feature)
+            del cur_feature
+
+        del time_points
+        del time_points_nums
+        del datasource_num
+        del feature_num
         
         # 组织成dataframe用于模型输入.
         X_list = pd.DataFrame(np.concatenate(X_list))
@@ -96,6 +102,8 @@ class FeatureProcesser:
         # 生成未来24小时的时间点，从凌晨4点开始，到凌晨4点结束（不包括）
         end_time = scheduled_time + datetime.timedelta(hours=1)
         time_points = self._generate_time_points(scheduled_time, end_time)
+        del scheduled_time
+        del end_time
 
         return time_points
 
@@ -119,6 +127,7 @@ class FeatureProcesser:
                                 current_time.second))
 
             current_time += datetime.timedelta(seconds=interval)
+        del start_time, end_time, interval
 
         return time_points
 
@@ -129,6 +138,7 @@ class FeatureProcesser:
         '''
         date = datetime.date(int(year), int(month), int(day))
         weekday = date.strftime("%A")  # %A表示完整的星期名称（如Monday）
+        del date
 
         return weekday
 

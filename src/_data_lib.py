@@ -311,6 +311,7 @@ class AutoMaintainer(object):
         """
         每日更新模型全量预测结果
         """
+        messager.send_to_bot_shortcut('每日更新模型全量预测结果 开始内存：{}'.format(get_memory_usage()))
         # 拆成24个小时的数据运行
 
         # 加载模型
@@ -342,7 +343,9 @@ class AutoMaintainer(object):
 
                         if cpu_usage > 20:  # 如果CPU使用率超过40%
                             time.sleep(interval)  # 暂停一小段时间
+                            del cpu_usage
                         else:
+                            del cpu_usage
                             break
 
                 start_time = time.time()
@@ -357,30 +360,39 @@ class AutoMaintainer(object):
                     batch = X_list[i:i + batch_size]
                     batch_predictions = self.model.predict(batch)
                     if i % 100000 == 0:
-                        gc.collect()
+                        # gc.collect()
                         messager.send_to_bot_shortcut('预测中，批次{} 内存：{}'.format(i, get_memory_usage()))
                         limit_cpu(interval)
-
                     predictions.extend(batch_predictions)
                     if i == 0:
                         messager.send_to_bot_shortcut('预测结果第一批样例形状：')
                         messager.send_to_bot_shortcut(batch_predictions.shape)
+                    
+                    del batch_predictions    
 
-                    del batch
+                del interval
+                del batch_size
 
                 stop_time = time.time()
 
                 messager.send_to_bot(
                     info_dict={'info': '{} '.format(datetime.datetime.now()) +
                                        str({'模型预测消耗时间：': stop_time - start_time})})
+                del start_time
+                del stop_time
 
                 # predicted_result = self.model.predict_proba(X_list)[:, 1]
 
                 self._set_model_predicted_result_pool(X_list, predictions)
+                del predictions
+                del X_list
             except Exception as e:
                 # 打印报错
                 messager.send_to_bot_shortcut('出现报错，详细信息为:')
                 messager.send_to_bot_shortcut(str(e))
+        del self._model_predicted_result_pool
+        gc.collect(2)
+        messager.send_to_bot_shortcut('最终内存：{}'.format(get_memory_usage()))
 
         # 删除模型。
         MODEL_DICT.model_dict.pop('decision_tree_model')
@@ -499,7 +511,7 @@ class AutoMaintainer(object):
 
         # X_list.to_csv('./tmp.csv', index=False)
         # del X_list
-        gc.collect()
+        # gc.collect()
 
         # snapshot2 = tracemalloc.take_snapshot()
         # top_stats = snapshot2.compare_to(snapshot1, 'lineno') # statistics('lineno')
@@ -515,13 +527,13 @@ class AutoMaintainer(object):
         X_list.drop(columns=['year', 'month', 'day', 'hour', 'minute', 'second'], inplace=True)
 
         # X_list = X_list[['datasource', 'datetime']]
-        gc.collect()
+        # gc.collect()
         messager.send_to_bot_shortcut('完成时间戳转换')
         messager.send_to_bot_shortcut('完成时间戳转换 内存：{}'.format(get_memory_usage()))
         print(X_list.info(memory_usage='deep'))
         X_list['predicted_y'] = np.array(predicted_result) > 0.99999
         del predicted_result
-        gc.collect()
+        # gc.collect()
 
         messager.send_to_bot_shortcut('将预测结果与特征完成拼接，完整形状为：')
         messager.send_to_bot_shortcut(X_list.shape)
@@ -536,7 +548,7 @@ class AutoMaintainer(object):
         for i in range(1000):
 
             if i % 10 == 0:
-                gc.collect()
+                # gc.collect()
                 messager.send_to_bot_shortcut('时间戳转换字符串批次{} 内存：{}'.format(i, get_memory_usage()))
 
             start_index = i * batch_size
@@ -549,6 +561,9 @@ class AutoMaintainer(object):
             X_list.loc[start_index:end_index, 'datetime_str'] = X_list.loc[start_index:end_index,
                                                                 'datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
             X_list.loc[start_index:end_index, 'datetime'] = None
+            del start_index
+            del end_index
+        del batch_size
         # # 使用.dt.strftime()将日期时间对象格式化为字符串
         # X_list['datetime_str'] = X_list['datetime'].dt.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -563,7 +578,7 @@ class AutoMaintainer(object):
         X_list = X_list[X_list['datasource'] < 33].reset_index(drop=True)
         messager.send_to_bot_shortcut('完成datasource筛选')
 
-        gc.collect()
+        # gc.collect()
 
         # debug
         print('未来一天的预测结果')
@@ -576,7 +591,13 @@ class AutoMaintainer(object):
         # 旧：一次性存储一天所有数据
         # self._model_predicted_result_pool = X_list
         # 新：每次存储1小时的数据
-        self._model_predicted_result_pool.append(X_list)
+        # self._model_predicted_result_pool.append(X_list)
+        # TODO: 替换成redis写入
+        X_list.to_csv('./tmp.csv', index=False)
+        del X_list
+        gc.collect(2)
+
+        messager.send_to_bot_shortcut('启动时预测当天可能有饼的时间点数量 内存：{}'.format(get_memory_usage()))
 
     def get_pending_datasources(self,  end_time=None, time_window_seconds=None):
         

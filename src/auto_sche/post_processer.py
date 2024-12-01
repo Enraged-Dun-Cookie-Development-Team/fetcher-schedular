@@ -40,11 +40,14 @@ def batch_predict(X, clf):
                 hour = (hour + 1) % 24
 
             predict_time.append([hour, minute, second])
+        del hour, minute, second
 
     df_time = pd.DataFrame(predict_time)
     df_time.columns = ['pred_hour', 'pred_minute', 'pred_second']
     print(df_time.shape)
     print(X.shape)
+
+    del predict_time, X, raw_y
     return pd.concat([X.reset_index(drop=True), df_time.reset_index(drop=True)], axis=1)
 
 
@@ -71,5 +74,7 @@ def delay_estimation(predict_time, actual_time, y_label=None):
 
     total_seconds_pred = predict_time.apply(time_to_seconds, axis=1)
     total_seconds_actual = actual_time.apply(time_to_seconds, axis=1)
+
+    del predict_time, actual_time, y_label
 
     return (total_seconds_pred - total_seconds_actual + 86400) % 86400
