@@ -474,12 +474,12 @@ if __name__ == '__main__':
 
     # 服务启动时预测一次.
     # auto_maintainer.daily_model_predict()
-    # 每日预测任务
-    # daily_scheduler = BackgroundScheduler()  
+    # # 每日预测任务
+    # daily_scheduler = BackgroundScheduler()
     # daily_scheduler.add_job(auto_maintainer.daily_model_predict, 'cron',
     #                         hour=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR'],
     #                         minute=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['MINUTE'])
-    # daily_scheduler.start()  
+    # daily_scheduler.start()
 
 
     # 蹲饼器健康情况监控

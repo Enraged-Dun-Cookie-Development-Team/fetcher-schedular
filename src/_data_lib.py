@@ -319,10 +319,10 @@ class AutoMaintainer(object):
         self.model = MODEL_DICT['decision_tree_model']
 
         self._model_predicted_result_pool = []
-        for i in range(24):
+        for j in range(24):
             try:
                 # debug
-                messager.send_to_bot_shortcut('预测第{}个小时的结果'.format(i + 1))
+                messager.send_to_bot_shortcut('预测第{}个小时的结果'.format(j + 1))
 
                 messager.send_to_bot_shortcut('开始整理输入特征')
                 X_list = feat_processer.feature_combine()
@@ -383,7 +383,7 @@ class AutoMaintainer(object):
 
                 # predicted_result = self.model.predict_proba(X_list)[:, 1]
 
-                self._set_model_predicted_result_pool(X_list, predictions)
+                self._set_model_predicted_result_pool(X_list, predictions, maintainer, j)
                 del predictions
                 del X_list
             except Exception as e:
@@ -399,7 +399,6 @@ class AutoMaintainer(object):
 
         gc.collect(2)
         messager.send_to_bot_shortcut('最终内存：{}'.format(get_memory_usage()))
-
 
     def get_post_data_list(self, pending_datasources_id_list, maintainer:Maintainer):
         """
@@ -494,9 +493,10 @@ class AutoMaintainer(object):
                 self.live_number_to_datasource_id_to_fetcher_count_mapping[cur_alive_fetcher_num
                         ][line['datasource_id']] = line['fetcher_count']
 
-    def _set_model_predicted_result_pool(self, X_list, predicted_result):
+    def _set_model_predicted_result_pool(self, X_list, predicted_result, maintainer:Maintainer, hour_index):
         """
         把预测结果和原始输入，整合成方便查找蹲饼时间和对应数据源的形式。
+        :param hour_index: 第几小时的结果
         """
         messager.send_to_bot_shortcut('开始后处理，内存：{}'.format(get_memory_usage()))
 
@@ -596,8 +596,18 @@ class AutoMaintainer(object):
         # 新：每次存储1小时的数据
         # self._model_predicted_result_pool.append(X_list)
         # TODO: 替换成redis写入
-        X_list.to_csv('./tmp.csv', index=False)
+        # X_list.to_csv('./tmp.csv', index=False)
+
+        # 先压缩
+        tmp_compressed_X_list = maintainer.redis.compress_data(X_list)
+        # 然后存入redis，ttl 24小时
+        cur_key = 'hour_' + str(hour_index)
+        save_redis_status = maintainer.redis.set_with_ttl(cur_key, tmp_compressed_X_list, 24 * 3600)
+
+        messager.send_to_bot_shortcut('第{}小时数据存储状态：{}'.format(cur_key, save_redis_status))
+
         del X_list
+        del tmp_compressed_X_list
         gc.collect(2)
 
         messager.send_to_bot_shortcut('启动时预测当天可能有饼的时间点数量 内存：{}'.format(get_memory_usage()))
@@ -623,6 +633,9 @@ class AutoMaintainer(object):
             # 调试阶段调整
             return []
             # return pending_datasource_id_list
+
+        # TODO: 按小时存储后的取数逻辑
+        # 用 end_time.hour 确定哪些需要取哪些数据
 
         X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * \
                                                                  self.interval_seconds * \
