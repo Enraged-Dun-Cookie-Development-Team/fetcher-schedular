@@ -472,8 +472,12 @@ if __name__ == '__main__':
 
     application.listen(CONFIG['SCHEDULAR']['PORT'], address=CONFIG['SCHEDULAR']['HOST'])
 
+    # 蹲饼器健康情况监控
+    ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()
+
     # 服务启动时预测一次.
     # auto_maintainer.daily_model_predict()
+
     # # 每日预测任务
     # daily_scheduler = BackgroundScheduler()
     # daily_scheduler.add_job(auto_maintainer.daily_model_predict, 'cron',
@@ -481,12 +485,8 @@ if __name__ == '__main__':
     #                         minute=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['MINUTE'])
     # daily_scheduler.start()
 
-
-    # 蹲饼器健康情况监控
-    ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()
-    
     # 1027注释掉：
-    # 向蹲饼器发送蹲饼指令
+    # # 向蹲饼器发送蹲饼指令
     # ioloop.PeriodicCallback(fetcher_request_sender.send_request, 10000).start()
 
     # ioloop.PeriodicCallback(send_heartbeat, 10000).start()

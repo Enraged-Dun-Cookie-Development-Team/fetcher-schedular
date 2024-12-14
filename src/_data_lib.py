@@ -279,9 +279,15 @@ class AutoMaintainer(object):
         # 放在 init 阶段执行.
         # self.set_config_mappings()
 
-        # 存储每天模型预测的结果
-        self._model_predicted_result_pool = []
-        
+        # 原：存储每天模型预测的结果
+        # 新：存储关注的2小时的预测结果。动态更新
+        self._model_predicted_result_pool = None
+        # 记录 self._model_predicted_result_pool 的截止时间。和当前时间进行对比以确定是否对其进行更新。
+        # 初始化用now.
+        self._model_predicted_result_end_time = datetime.datetime.now()
+
+        # 存储redis的前缀
+        self.redis_name_prefix = "cookie:autosche:hour_{}"
         # 后面改成配置
         self.interval_seconds = 1
         # 后面改成配置
@@ -390,7 +396,7 @@ class AutoMaintainer(object):
                 # 打印报错
                 messager.send_to_bot_shortcut('出现报错，详细信息为:')
                 messager.send_to_bot_shortcut(str(e))
-        del self._model_predicted_result_pool
+        # del self._model_predicted_result_pool
 
         # 删除模型。
         MODEL_DICT.model_dict.pop('decision_tree_model')
@@ -535,6 +541,10 @@ class AutoMaintainer(object):
         messager.send_to_bot_shortcut('完成时间戳转换 内存：{}'.format(get_memory_usage()))
         print(X_list.info(memory_usage='deep'))
         X_list['predicted_y'] = np.array(predicted_result) > 0.99999
+
+        # 只保留需要蹲饼的时间.
+        X_list = X_list[X_list['predicted_y'] == True].reset_index(drop=True)
+
         del predicted_result
         # gc.collect()
 
@@ -595,13 +605,13 @@ class AutoMaintainer(object):
         # self._model_predicted_result_pool = X_list
         # 新：每次存储1小时的数据
         # self._model_predicted_result_pool.append(X_list)
-        # TODO: 替换成redis写入
-        # X_list.to_csv('./tmp.csv', index=False)
 
         # 先压缩
         tmp_compressed_X_list = maintainer.redis.compress_data(X_list)
         # 然后存入redis，ttl 24小时
-        cur_key = 'hour_' + str(hour_index)
+
+        # 获取正式存储的key.
+        cur_key = self.get_redis_key_by_hour(int(hour_index))
         save_redis_status = maintainer.redis.set_with_ttl(cur_key, tmp_compressed_X_list, 24 * 3600)
 
         messager.send_to_bot_shortcut('第{}小时数据存储状态：{}'.format(cur_key, save_redis_status))
@@ -612,9 +622,46 @@ class AutoMaintainer(object):
 
         messager.send_to_bot_shortcut('启动时预测当天可能有饼的时间点数量 内存：{}'.format(get_memory_usage()))
 
+    def update_model_predicted_result_pool(self):
+        """
+        对当前时间，判断 self._model_predicted_result_pool 还够不够用。不够了的话取出新一个小时的结果。
+        :return:
+        """
+        cur_time = datetime.datetime.now()
+        time_difference = self._model_predicted_result_end_time - cur_time
+        # 剩余秒数
+        seconds_difference = time_difference.total_seconds()
+
+        # 还剩300s时更新。
+        cur_time_hour = cur_time.hour
+        if seconds_difference < 300:
+            # 以下两个结果均为pd.Dataframe
+            hour_now_res = maintainer.redis.extract_data(
+                maintainer.redis.get(self.get_redis_key_by_hour(cur_time_hour)))
+            hour_next_res = maintainer.redis.extract_data(
+                maintainer.redis.get(self.get_redis_key_by_hour(cur_time_hour + 1)))
+
+            self._model_predicted_result_pool = pd.concat([hour_now_res, hour_next_res], axis=0)
+
+            # 时间点替换为整点
+            self._model_predicted_result_end_time = cur_time.replace(minute=0, second=0) + datetime.timedelta(hours=2)
+
+    def get_redis_key_by_hour(self, hour):
+        """
+        对给定的时间信息，获取与redis交互（存、取）的key。
+        :param hour: int
+        :return redis_key: key名称。
+        """
+        redis_key = self.redis_name_prefix.format(hour)
+        return redis_key
+
     def get_pending_datasources(self,  end_time=None, time_window_seconds=None):
-        
-        # 设置需要判断的时间段的右端点
+        """
+        :param end_time: 要蹲饼时间的右端点。一般是当前时间。
+        :param time_window_seconds:
+        :return:
+        """
+        # 设置需要判断的时间段的右端点.
         if not end_time:
             end_time = datetime.datetime.now()
         else:
@@ -622,8 +669,8 @@ class AutoMaintainer(object):
       
             end_time = datetime.datetime.strptime(end_time, date_format)
         
-        # 从3点过去，经过了多少个小时
-        cur_hour_offset = max((end_time.hour + 24 - 3) % 24, 1)
+        # 从每天开始处理，经过了多少个小时
+        cur_hour_offset = max((end_time.hour + 24 - AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR']) % 24, 1)
 
         # 初始化，没有开始预测的时候：
         # print('?' * 20, self._model_predicted_result_pool)
@@ -636,13 +683,25 @@ class AutoMaintainer(object):
 
         # TODO: 按小时存储后的取数逻辑
         # 用 end_time.hour 确定哪些需要取哪些数据
+        """
+        取数总体逻辑：
+        1. 获取当前时间 ✓
+        2.1 根据当前时间，判断是否需要取出新一小时的预测结果 ✓
+        2.2 如果需要更新，则更新
+        3. 用当前时间段的结果（self._model_predicted_result_pool）根据起、止时间筛选需要蹲饼的数据源。
+        """
+        # 判断是否需要更新
+        self.update_model_predicted_result_pool()
 
-        X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * \
-                                                                 self.interval_seconds * \
-                                                                 self.datasource_num * 3600:
-                    (cur_hour_offset + 1) * self.interval_seconds * self.datasource_num * 3600
-                    ].reset_index(drop=True)
+        # 旧：从24h的结果中取出对应时间段
+        # X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * \
+        #                                                          self.interval_seconds * \
+        #                                                          self.datasource_num * 3600:
+        #             (cur_hour_offset + 1) * self.interval_seconds * self.datasource_num * 3600
+        #             ].reset_index(drop=True)
 
+        # 新：直接使用当前段
+        X_list_filtered = self._model_predicted_result_pool
         # print('^^^^^' * 4 + ' X_list_filtered')
         # print(X_list_filtered)
 
@@ -650,6 +709,7 @@ class AutoMaintainer(object):
         if not time_window_seconds:
             time_window_seconds = 5
 
+        # 确定需要索引的开始时间和结束时间。
         start_time = end_time - datetime.timedelta(seconds=time_window_seconds)
 
         start_time = start_time.strftime('%Y-%m-%d %H:%M:%S')
