@@ -476,7 +476,9 @@ if __name__ == '__main__':
     ioloop.PeriodicCallback(health_monitor.health_scan, 5000).start()
 
     # 服务启动时预测一次.
-    # auto_maintainer.daily_model_predict()
+    # 241221update: 检测如果redis当中当天的key不全，则补充预测一次。
+    if not auto_maintainer.pass_redis_data_verify(maintainer):
+        auto_maintainer.daily_model_predict()
 
     # # 每日预测任务
     # daily_scheduler = BackgroundScheduler()
@@ -485,7 +487,7 @@ if __name__ == '__main__':
     #                         minute=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['MINUTE'])
     # daily_scheduler.start()
 
-    # 1027注释掉：
+    # 241027注释掉：
     # # 向蹲饼器发送蹲饼指令
     # ioloop.PeriodicCallback(fetcher_request_sender.send_request, 10000).start()
 
