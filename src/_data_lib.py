@@ -273,7 +273,8 @@ class AutoMaintainer(object):
         self.datasource_id_to_config_mapping = dict()
         self.datasource_id_to_name_mapping = dict()
 
-        # [不同蹲饼器数量下的]，[数据库里的datasource_id] 查询对应的[蹲饼器编号]。
+        # key: 两层，[不同蹲饼器数量下的]，[数据库里的datasource_id]
+        # value: 查询对应的[蹲饼器编号]
         self.live_number_to_datasource_id_to_fetcher_count_mapping = dict()
 
         # 放在 init 阶段执行.
@@ -329,14 +330,19 @@ class AutoMaintainer(object):
         MODEL_DICT.load_model('decision_tree_model_v2', path_prefix='./')
         self.model = MODEL_DICT['decision_tree_model']
 
-        self._model_predicted_result_pool = []
+        # 旧代码：本地list存储结果。
+        # self._model_predicted_result_pool = []
         for j in range(24):
             try:
                 # debug
                 messager.send_to_bot_shortcut('预测第{}个小时的结果'.format(j + 1))
 
                 messager.send_to_bot_shortcut('开始整理输入特征')
-                X_list = feat_processer.feature_combine()
+
+                # 现实世界的小时。是AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR']作为起点，j作为偏移量的时间。
+                hour_index = AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR'] + j
+
+                X_list = feat_processer.feature_combine(hour_index)
                 messager.send_to_bot_shortcut('输入特征整理完成')
 
                 import psutil
@@ -512,7 +518,7 @@ class AutoMaintainer(object):
     def _set_model_predicted_result_pool(self, X_list, predicted_result, maintainer:Maintainer, time_info):
         """
         把预测结果和原始输入，整合成方便查找蹲饼时间和对应数据源的形式。
-        :param hour_index: 第几小时的结果
+        :param hour_index: 当前小时（例如晚上20时）的结果
         :time_info: 时间相关字段
         """
 
@@ -704,9 +710,6 @@ class AutoMaintainer(object):
             date_format = '%Y-%m-%d %H:%M:%S'  
       
             end_time = datetime.datetime.strptime(end_time, date_format)
-        
-        # 从每天开始处理，经过了多少个小时
-        cur_hour_offset = max((end_time.hour + 24 - AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR']) % 24, 1)
 
         # 初始化，没有开始预测的时候：
         # print('?' * 20, self._model_predicted_result_pool)

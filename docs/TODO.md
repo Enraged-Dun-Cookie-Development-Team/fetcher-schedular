@@ -1,16 +1,8 @@
 # TODO
-* 基本框架，接受轮询请求，对单个蹲饼器，返回 updated ttl
-* (测试用) 蹲饼器，可发请求
-* 蹲饼器注册框架，对多个蹲饼器，分别管理状态
-* 更新蹲饼器策略, 根据当前各蹲饼器状态，重新分配蹲饼方法.(这里和蹲饼器对齐如何分配.)
-
-
-* https://github.com/Enraged-Dun-Cookie-Development-Team/cookie-fetcher/tree/master/src/extend
-config 对应json5的配置，要保留修改空间.  
-* mysql里有interval 是单独配置的；其他字段是config里面序列化了.
-* 直接内存.
-* 如果warning了就去数据库取config.
-* 2022-12-23 10:15:14
-    - 引入数据库组件；暂不引入ORM.
-    - 写一个get的接口，只要被请求了，就更新结果.
+* 校验数据点的数量 = 实际的datasource_num * time_points.
+    * time_points 是以interval（默认为1秒）控制间隔的。比较容易控制数量
+    * 难点是datasource_num
+        - 机器学习模型是离线训练的。它学习了固定的 datasource 映射。
+        - 需要确保：机器学习模型输入一个原始datasource_id时，会映射变成正确的输入feature.(241230现在有bug) 
+        - 在离线训练期间未遇到的datasource，例如新增的，走default逻辑。
  

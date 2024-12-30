@@ -25,17 +25,18 @@ class FeatureProcesser:
     def __init__(self):
         pass
 
-    def feature_combine(self):
+    def feature_combine(self, hour_index):
         X_list = []
         # 需要处理：12个feature
         feature_num = 12
+
         datasource_num = AUTO_SCHE_CONFIG['DATASOURCE_POSSIBLE_NUMS'] # 域内实际出现过的蹲饼器编号数量.
         messager.send_to_bot_shortcut('开始特征工程时的内存：{}'.format(get_memory_usage()))
         messager.send_to_bot_shortcut('适配的的数据源数量：{}'.format(datasource_num))
         messager.send_to_bot_shortcut('开始梳理时间相关的特征')
         messager.send_to_bot_shortcut('开始梳理时间相关的特征 内存：{}'.format(get_memory_usage()))
 
-        time_points = self.feature_of_time()
+        time_points = self.feature_of_time(hour_index)
         messager.send_to_bot_shortcut('梳理时间相关的特征完成')
         messager.send_to_bot_shortcut('梳理时间相关的特征完成 内存：{}'.format(get_memory_usage()))
 
@@ -87,17 +88,19 @@ class FeatureProcesser:
 
         return X_list
 
-    def feature_of_time(self):
-        scheduled_time = datetime.datetime.now().replace(hour=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR'],
-                                                         minute=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['MINUTE'],
-                                                         second=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['SECOND'],
-                                                         microsecond=0)
+    def feature_of_time(self, hour_index):
+        """
+        根据 hour_index 所确定的时间点，生成对应的时间feature.
+        :return:
+        """
 
-        # 改为部署时预测一次.
-        # scheduled_time = datetime.datetime.now()
-        # # 如果当前时间已经过了今天的凌晨4点，那么将定时任务时间设置为明天的凌晨4点
-        # if datetime.datetime.now() > scheduled_time:
-        #     scheduled_time += datetime.timedelta(days=1)
+        scheduled_time = datetime.datetime.now().replace(hour=int(hour_index),
+                                                         minute=0,
+                                                         second=0,
+                                                         microsecond=0)
+        # 第二天（一般是凌晨几个小时）的场合
+        if datetime.datetime.now() > scheduled_time:
+            scheduled_time += datetime.timedelta(days=1)
 
         # 生成未来24小时的时间点，从凌晨4点开始，到凌晨4点结束（不包括）
         end_time = scheduled_time + datetime.timedelta(hours=1)
