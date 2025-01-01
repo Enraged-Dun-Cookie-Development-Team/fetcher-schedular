@@ -440,7 +440,7 @@ class AutoMaintainer(object):
             logger.info('当前蹲饼器全部失效，不主动发送请求')
             return []
 
-        # 当前数量下的所有fetcher的配置。
+        # 当前活跃蹲饼起数量下，每个fetcher的配置。
         fetcher_config_pool_of_live_num = self.live_number_to_datasource_id_to_fetcher_count_mapping[alive_fetcher_num]
 
         # print('当前活跃数量的蹲饼器的配置表:', fetcher_config_pool_of_live_num)
@@ -505,9 +505,13 @@ class AutoMaintainer(object):
             self.datasource_id_to_name_mapping[cur_id] = cur_name
 
         # fetcher_config_df -> self.live_number_to_datasource_id_to_fetcher_count_mapping
-        # 取出每个存活蹲饼器的数量列表
+
+        # 取出配置中已经配置过的，蹲饼器的数量范围。防止数量超过上限。
         alive_fetcher_num_list = list(set(fetcher_config_df['live_number'].tolist()))
         for cur_alive_fetcher_num in alive_fetcher_num_list:
+
+            # 在当前存活蹲饼器的数量下，为每个datasource_id分配具体的蹲饼器。
+            # fetcher_count 是蹲饼器编号。
             df_tmp = fetcher_config_df[fetcher_config_df['live_number'] == cur_alive_fetcher_num].copy().reset_index(drop=True)
             self.live_number_to_datasource_id_to_fetcher_count_mapping[cur_alive_fetcher_num] = dict()
             for idx in range(df_tmp.shape[0]):
