@@ -27,3 +27,7 @@
 * 启动redis
 * 启动grpc server
 * 启动调度器
+
+# 其他说明
+
+* 对于项目中一些变量的统一说明可见[vars.md](docs/vars.md)

@@ -1,6 +1,7 @@
 import pymysql.cursors
 import redis
 import pandas as pd
+from pandas import DataFrame  # 取数解压时使用.
 import os
 import sys
 sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
@@ -11,6 +12,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import MetaData, inspect, create_engine, event
 from sqlalchemy import Table
 from sqlalchemy.exc import DisconnectionError
+# 专门处理优化这里.
+import pickle
+import zlib
 
 
 def checkout_listener(dbapi_con, con_record, con_proxy):
@@ -90,6 +94,58 @@ class HandleRedis:
 
     def set(self, name, value):
         return self.conn.set(name, value)
+
+    def set_with_ttl(self, name, value, seconds):
+        """
+        存数时设置秒为单位的ttl.
+        :param name: key
+        :param value: value
+        :param seconds: ttl，单位为秒
+        :return:
+        """
+        # 参数: 键名、过期时间（秒）、键值
+        self.conn.setex(name, seconds, value)
+
+        # 检查ttl是否确实存入
+        if self.conn.exists(name):
+            ttl = self.conn.ttl(name)
+            return "The TTL of {}' is {} seconds.".format(name, ttl)
+        else:
+            return "The key 'key_with_ttl' does not exist."
+
+    def update_ttl(self, name, seconds):
+
+        # 如果需要更新已有键的ttl
+        return self.conn.expire(name, seconds)  # TTL = seconds
+
+    def set_ttl_in_future_timestamp(self, name, timestamp_in_future):
+
+        # timestamp_in_future = int(time.time()) + 60  # 当前时间加60秒
+
+        # 如果需要设置ttl为某个时间点
+        return self.conn.expireat(name, timestamp_in_future)
+
+    @staticmethod
+    def compress_data(data):
+        """
+        dataframe在传入redis前要先压缩成bytes.
+        :param data:
+        :return:
+        """
+        bytes_ = zlib.compress(pickle.dumps(data), 5)
+        return bytes_
+
+    @staticmethod
+    def extract_data(bytes_):
+        """
+        redis取出数据时要还原成对应的数据结构.
+        :return:
+        """
+        # 解压缩数据
+        decompressed_data = zlib.decompress(bytes_)
+        # 反序列化数据
+        data = pickle.loads(decompressed_data)
+        return data
 
 
 sql_client = HandleMysql(CONFIG)
