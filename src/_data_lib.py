@@ -826,6 +826,46 @@ class AutoMaintainer(object):
         return True
 
 
+class DataSourceMapping(object):
+    """
+    管理与校验全流程输入特征到实际datasource之间的映射关系
+    保证兜底
+    """
+
+    def offline_encode_method(self):
+        """
+        离线编码的脚本，仅供开发时参考，后续删除
+        一条饼在 your_data_mongo.csv当中的存储形态.
+        datasource,text,is_top,is_retweeted,category,source_type,year,month,day,hour,minute,second,weekday,is_origin,label
+
+        14,【朝陇山 / 朝山】“商品总需赶在时间的前面。那就，稍后再见。”,1,0,0,,2017,12,22,7,22,24,Friday,False,0
+
+        这里14 编码之后变成了11.
+
+        明日方舟朝陇山 (微博)
+        """
+
+        from sklearn.preprocessing import LabelEncoder
+
+        # 对分类变量进行编码
+        le = LabelEncoder()
+        # df_2 = pd.DataFrame(data_pool)
+        df_2 = pd.read_csv('./your_data_mongo.csv')
+
+        df_2['datasource_encoded'] = le.fit_transform(df_2['datasource'])
+
+        datasource_encoding_dict = {}
+
+        for idx, i in enumerate(le.classes_):
+            datasource_encoding_dict[int(i)] = {
+                "datasource_idx": idx
+            }
+
+        datasource_encoding_dict['default'] = {
+            "datasource_idx": idx + 1
+        }
+
+
 fetcher_config_pool = FetcherConfigPool(conf=CONFIG)
 
 maintainer = Maintainer(conf=CONFIG)

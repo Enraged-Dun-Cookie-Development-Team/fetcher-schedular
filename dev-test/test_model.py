@@ -6,6 +6,7 @@ import json
 import traceback
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from src.auto_sche.model_loader import MODEL_DICT
 
@@ -44,10 +45,14 @@ test_data = pd.DataFrame(
     ]
 )
 
+MODEL_DICT.load_model('decision_tree_model_v2', path_prefix='./')
+
 # 端到端输出结果
 print(MODEL_DICT['decision_tree_model'].predict(test_data))
 
 # 看 datasource_encoder 输出结果
-print(MODEL_DICT['datasource_encoder'].inverse_transform(12))
+print(MODEL_DICT['datasource_encoder'].inverse_transform([12]))
+print(MODEL_DICT['datasource_encoder'].transform([14]))
 
+print(MODEL_DICT['datasource_encoder'].classes_)
 
