@@ -90,7 +90,7 @@ class ManualStrategy(BasicStrategy):
                 latest_config_pool['MOOK'] = mook_config_pool['MOOK']
         return is_valid, latest_config_pool
 
-    def _update(self, maintainer=None, is_mook=False):
+    def _update(self, maintainer=None, is_mook=False, is_debug=True):
         """
         实时状态从 maintainer 中获取.
 
@@ -123,6 +123,12 @@ class ManualStrategy(BasicStrategy):
         # 
         # fetcher_name_list = ['SilverAsh', 'Saria']
         fetcher_name_list = maintainer.alive_instance_id_list
+
+        # 终末地时期debug用        
+        logger.warning('alive_instance_id_list is: {}'.format(alive_instance_id_list))
+        if is_debug:
+            # 为确保一个蹲饼器可以蹲到，只配置一台存活
+            fetcher_name_list = [fetcher_name_list[-1]]
 
         # 模拟平台只有一个蹲饼器.
         if is_mook:
