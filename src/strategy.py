@@ -127,8 +127,9 @@ class ManualStrategy(BasicStrategy):
         # 终末地时期debug用        
         logger.warning('alive_instance_id_list is: {}'.format(fetcher_name_list))
         if is_debug:
-            # 为确保一个蹲饼器可以蹲到，只配置一台存活
-            fetcher_name_list = [fetcher_name_list[-1]]
+             if len(fetcher_name_list) > 1:
+                # 为确保一个蹲饼器可以蹲到，只配置一台存活
+                fetcher_name_list = [fetcher_name_list[-1]]
 
         # 模拟平台只有一个蹲饼器.
         if is_mook:
