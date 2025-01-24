@@ -125,7 +125,7 @@ class ManualStrategy(BasicStrategy):
         fetcher_name_list = maintainer.alive_instance_id_list
 
         # 终末地时期debug用        
-        logger.warning('alive_instance_id_list is: {}'.format(alive_instance_id_list))
+        logger.warning('alive_instance_id_list is: {}'.format(fetcher_name_list))
         if is_debug:
             # 为确保一个蹲饼器可以蹲到，只配置一台存活
             fetcher_name_list = [fetcher_name_list[-1]]
