@@ -9,7 +9,8 @@ import logging
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from joblib import dump, load
-
+from src.auto_sche.encoder_usage import EncoderManager
+# TODO: 兼容encoder。
 
 class ModelLoader:
     def __init__(self):

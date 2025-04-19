@@ -28,6 +28,9 @@ import tracemalloc
 tracemalloc.start()
 snapshot1 = tracemalloc.take_snapshot()
 
+# 新增结果合法性校验的逻辑
+from src.auto_sche.validator_kit import NumberEqualityValidator
+
 
 class Maintainer(object):
     '''
@@ -284,8 +287,12 @@ class AutoMaintainer(object):
         
         # 后面改成配置
         self.interval_seconds = 1
-        # 后面改成配置
-        self.datasource_num = 24
+        # 理论上除非修改 predefined_classes（修改离线文件），否则这里的数字是不会变化的。
+        self.datasource_num = 24 # TODO: 改成加入读取 predefined_classes 的长度。
+
+        # 每次预测完结果，初始化一个result_num_validator，用于计算数量是否通过了校验。
+        self.result_num_validator = None
+
 
         try:
             # 准备就绪，bot发送指令
@@ -310,6 +317,10 @@ class AutoMaintainer(object):
     def daily_model_predict(self):
         """
         每日更新模型全量预测结果
+        v2: 重构每日更新预测结果的逻辑。基本逻辑如下：
+        （1）对每个小时的预测，计算理论上会有多少个数据点
+        （2）实际预测并给出结果
+        （3）校验结果的数量是否正确。
         """
         messager.send_to_bot_shortcut('每日更新模型全量预测结果 开始内存：{}'.format(get_memory_usage()))
         # 拆成24个小时的数据运行
@@ -319,6 +330,11 @@ class AutoMaintainer(object):
         self.model = MODEL_DICT['decision_tree_model']
 
         self._model_predicted_result_pool = []
+        
+        # 首先计算理论返回预测结果的数量。关于self.datasource_num的更新方式，详见__init__部分说明。
+        expected_result_len =  self.datasource_num * 60 * 60 * 1
+        
+        # 然后开始逐小时预测.
         for j in range(24):
             try:
                 # debug
@@ -382,6 +398,14 @@ class AutoMaintainer(object):
                 del stop_time
 
                 # predicted_result = self.model.predict_proba(X_list)[:, 1]
+
+                validator = NumberEqualityValidator(expected_result_len, len(predictions))
+                
+                validate_result = validator.validate()
+
+                if not validate_result:
+                    messager.send_to_bot_shortcut('预测数量验证失败，差异详情:{}'.format(result.errors))
+
 
                 self._set_model_predicted_result_pool(X_list, predictions, maintainer, j)
                 del predictions
@@ -613,7 +637,7 @@ class AutoMaintainer(object):
         messager.send_to_bot_shortcut('启动时预测当天可能有饼的时间点数量 内存：{}'.format(get_memory_usage()))
 
     def get_pending_datasources(self,  end_time=None, time_window_seconds=None):
-        
+
         # 设置需要判断的时间段的右端点
         if not end_time:
             end_time = datetime.datetime.now()
@@ -623,7 +647,7 @@ class AutoMaintainer(object):
             end_time = datetime.datetime.strptime(end_time, date_format)
         
         # 从3点过去，经过了多少个小时
-        cur_hour_offset = max((end_time.hour + 24 - 3) % 24, 1)
+        cur_hour_offset = max((end_time.hour + 24 - AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR']) % 24, 1)
 
         # 初始化，没有开始预测的时候：
         # print('?' * 20, self._model_predicted_result_pool)
@@ -636,6 +660,8 @@ class AutoMaintainer(object):
 
         # TODO: 按小时存储后的取数逻辑
         # 用 end_time.hour 确定哪些需要取哪些数据
+        
+        # !!!DOING!!!
 
         X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * \
                                                                  self.interval_seconds * \
