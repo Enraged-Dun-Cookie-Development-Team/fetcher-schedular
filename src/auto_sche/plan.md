@@ -14,3 +14,5 @@
     * 需要使用 encoder.classes_ 索引出模型输入的 feature 实际对应哪个 datasource。
         - 额外加第n + 1类对应的default配置。
     * MODEL_DICT 的初始化，升级成 manager.
+
+feature process + model prediction + post rules

@@ -121,7 +121,7 @@ class FeatureProcesser:
         while current_time < end_time:
             time_points.append((current_time.year,
                                 current_time.month,
-                                current_time.day,
+                                current_time.day, 
                                 current_time.hour,
                                 current_time.minute,
                                 current_time.second))
