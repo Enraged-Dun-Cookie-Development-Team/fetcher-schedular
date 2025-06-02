@@ -16,3 +16,29 @@
     * MODEL_DICT 的初始化，升级成 manager.
 
 feature process + model prediction + post rules
+
+* feature process(离线部分)
+
+新旧代码替换对模型效果无影响。但可以保证处理后的feature仍有高可读性，例如周一就是0，周日就是6. 
+方便后序蹲饼策略使用，降低开发阶段的认知成本。
+
+```python3
+## 旧
+le1 = LabelEncoder()  
+df_2['weekday_encoded'] = le1.fit_transform(df_2['weekday'])  
+
+
+## 新
+from src.auto_sche.encoder_kit import OrderedLabelEncoder # 实现了一个自排序编码器
+
+encoder = OrderedLabelEncoder(
+    classes=['Monday', 'Truesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+    default_label=-1,
+    unknown_value="UNK"
+)
+encoder.fit([])  # 空fit，触发预定义类别
+
+df_2['weekday_encoded'] = le1.transform(df_2['weekday'])  
+
+
+```
