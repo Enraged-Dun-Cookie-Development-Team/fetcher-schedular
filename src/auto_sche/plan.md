@@ -25,11 +25,11 @@ feature process + model prediction + post rules
 ```python3
 ## 旧
 le1 = LabelEncoder()  
-df_2['weekday_encoded'] = le1.fit_transform(df_2['weekday'])  
+df_2['weekday_encoded'] = le1.fit_transform(df_2['weekday'])  # 出现序
 
 
 ## 新
-from src.auto_sche.encoder_kit import OrderedLabelEncoder # 实现了一个自排序编码器
+from src.auto_sche.encoder_kit import OrderedLabelEncoder # 实现的自排序编码器
 
 encoder = OrderedLabelEncoder(
     classes=['Monday', 'Truesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],

@@ -9,8 +9,8 @@ import logging
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from joblib import dump, load
-from src.auto_sche.encoder_usage import EncoderManager
-# TODO: 兼容encoder。
+from src.auto_sche.encoder_kit import OrderedLabelEncoder
+# DONE: 兼容encoder。
 
 class ModelLoader:
     def __init__(self):
@@ -20,8 +20,8 @@ class ModelLoader:
     def load_all_model(self):
         for name in [
             # 'decision_tree_model_v2',
-            'weekday_encoder_v2',
-            'datasource_encoder_v2'
+            'weekday_encoder_v3',
+            'datasource_encoder_v3'
         ]:
             self.load_model(name)
 
