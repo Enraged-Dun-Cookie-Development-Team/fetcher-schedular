@@ -40,5 +40,8 @@ encoder.fit([])  # 空fit，触发预定义类别
 
 df_2['weekday_encoded'] = le1.transform(df_2['weekday'])  
 
+# 离线训练的配置
+classes=[i for i in range(AUTO_SCHE_CONFIG['DATASOURCE_POSSIBLE_NUMS'])]
 
 ```
+

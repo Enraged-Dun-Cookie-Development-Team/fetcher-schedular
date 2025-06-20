@@ -288,8 +288,8 @@ class AutoMaintainer(object):
         # 后面改成配置
         self.interval_seconds = 1
         # 理论上除非修改 predefined_classes（修改离线文件），否则这里的数字是不会变化的。
-        self.datasource_num = 24 # TODO: 改成加入读取 predefined_classes 的长度。
-
+        # Done, 顺序也是和库里自增序一致的。
+        self.datasource_num = AUTO_SCHE_CONFIG['DATASOURCE_POSSIBLE_NUMS'] 
         # 每次预测完结果，初始化一个result_num_validator，用于计算数量是否通过了校验。
         self.result_num_validator = None
 
@@ -326,7 +326,7 @@ class AutoMaintainer(object):
         # 拆成24个小时的数据运行
 
         # 加载模型
-        MODEL_DICT.load_model('decision_tree_model_v2', path_prefix='./')
+        MODEL_DICT.load_model('decision_tree_model_v3', path_prefix='./')
         self.model = MODEL_DICT['decision_tree_model']
 
         self._model_predicted_result_pool = []
