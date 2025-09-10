@@ -29,6 +29,8 @@ tracemalloc.start()
 snapshot1 = tracemalloc.take_snapshot()
 
 
+WEIBO_FLAG = 'weibo'
+
 class Maintainer(object):
     '''
     多个蹲饼器的信息管理器。
@@ -68,6 +70,19 @@ class Maintainer(object):
         self.has_valid_config = True
 
         self.is_init = True
+
+        # 以下是关于蹲饼被风控后的策略参数；当前仅针对weibo
+        # 指数退避的累积连续重试次数
+        self.retry_times = 0
+        # 超过 max_retry_limit 次达到极限。
+        self.max_retry_limit = 5
+
+        self.initial_delay = 600
+        # 记录最近一次失败的时间
+        self.last_failed_timestamp = time.time()
+        # 记录上次设置的delay时间
+        self.last_delay_time = 600
+
         logger.info('调度器Maintainer初始化完成')
 
     def _init_conn_redis(self, conf):
@@ -121,7 +136,43 @@ class Maintainer(object):
                                         self._failed_platform_by_instance[instance_id]))
 
         # 加入失败蹲饼器的倒计时
-        self.failed_platform_by_instance_countdown[instance_id][cur_failed_platform] = 600
+        # 250909 指数退避
+        logger.info('[FAILED PLATFORM] name: {}'.format(cur_failed_platform))
+
+        if WEIBO_FLAG in cur_failed_platform:
+
+            logger.info('[WEIBO FLAG] 触发 weibo 风控')
+            """
+            首先判断是否是累积失败
+            """
+            still_retry = False
+            # 当前时间 仅仅略大于刚结束delay 的时间。说明仍然被风控了
+            if time.time() - self.last_failed_timestamp < self.last_delay_time + 120:
+                still_retry = True
+
+            # 持续失败则增加等待时间；否则回归默认值
+            if still_retry:
+                self.retry_times += 1
+            else:
+                self.retry_times = 0
+            
+            # 开始设置delay时间
+            cur_delay_seconds = self.initial_delay * (2.09 ** min(self.retry_times, self.max_retry_limit)) + 2.16 * random.uniform(0, 5)
+
+            # 记录这次的delay时长
+            self.last_delay_time = cur_delay_seconds
+            # 更新记录失败时间戳
+            self.last_failed_timestamp = time.time()       
+            logger.info('[WEIBO FLAG] 指数退避：连续delay次数: {}'.format(self.retry_times))        
+            logger.info('[WEIBO FLAG] 指数退避：此次delay时长: {}'.format(cur_delay_seconds))
+            
+        else:
+            cur_delay_seconds = self.initial_delay
+        
+
+        # 实际设置为蹲饼器冷却期
+        self.failed_platform_by_instance_countdown[instance_id][cur_failed_platform] = cur_delay_seconds
+ 
 
         return self._failed_platform_by_instance[instance_id]
 
