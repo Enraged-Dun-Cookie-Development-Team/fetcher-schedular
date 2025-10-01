@@ -23,7 +23,12 @@
 # 本地开发
 
 * 配置本地环境变量
+  * set_environ_config.sh.sample
 * 启动数据库
-* 启动redis
-* 启动grpc server
-* 启动调度器
+  * (如果后台默认运行，则脚本层面不需要设置)
+* 启动redis  (终端1)
+  * redis-server conf/local_redis.conf
+* 启动grpc server （终端2）
+  * python src/_grpc_lib_local_server.py 
+* 启动调度器（终端3）
+  * python src/schedular.py 
