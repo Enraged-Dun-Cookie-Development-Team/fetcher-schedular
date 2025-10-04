@@ -136,12 +136,15 @@ class HandleRedis:
         return bytes_
 
     @staticmethod
-    def extract_data(self, bytes_):
+    def extract_data(bytes_):
         """
         redis取出数据时要还原成对应的数据结构.
         :return:
         """
-        pass
+        output_df = pickle.loads(zlib.decompress(bytes_))
+
+        return output_df
+
 
 
 sql_client = HandleMysql(CONFIG)

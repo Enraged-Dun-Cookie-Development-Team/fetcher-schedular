@@ -3,6 +3,11 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.validation import column_or_1d
 from joblib import dump, load
 
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
+
 class OrderedLabelEncoder(LabelEncoder):
     """
     老版LabelEncoder是根据原始数据value在样本中出现的先后顺序来依次编码的。
