@@ -132,3 +132,6 @@ dmypy.json
 
 /conf/conf.json
 /conf/set_environ_config.sh
+
+.idea/
+.Ceobe_Proto/
