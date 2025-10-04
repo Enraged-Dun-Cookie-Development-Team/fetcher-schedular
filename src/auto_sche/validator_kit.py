@@ -48,10 +48,10 @@ class DataTypeValidator(Validator):
         return ValidationResult(len(errors) == 0, errors)
 
 class NumberEqualityValidator(Validator):
-	"""
-	数字是否相等校验。
-	典型使用场景是按小时产出的模型预测结果是否与数据源（from数据库）所需的结果数量相匹配。
-	"""
+    """
+    数字是否相等校验。
+    典型使用场景是按小时产出的模型预测结果是否与数据源（from数据库）所需的结果数量相匹配。
+    """
     def __init__(self, 
                  value1: float, 
                  value2: float, 

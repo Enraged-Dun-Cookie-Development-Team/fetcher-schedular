@@ -6,11 +6,19 @@ import traceback
 import copy
 import logging
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+# 调整路径，确保项目根目录在Python路径中
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+grandparent_dir = os.path.dirname(parent_dir)
+sys.path.append(grandparent_dir)
+sys.path.append(parent_dir)
+sys.path.append(current_dir)  # 确保当前目录也在路径中
 
 from joblib import dump, load
-from src.auto_sche.encoder_kit import OrderedLabelEncoder
-# DONE: 兼容encoder。
+# 明确导入所需的类，确保在反序列化时能被找到
+from .encoder_kit import OrderedLabelEncoder
+import src.auto_sche.encoder_kit as encoder_kit  # 使用绝对导入
+
 
 class ModelLoader:
     def __init__(self):

@@ -25,7 +25,16 @@ class FeatureProcesser:
     def __init__(self):
         pass
 
-    def feature_combine(self):
+    def feature_combine(self, real_hour=None):
+        """
+
+        通过特征工程构造未来24h的输入X.
+        real_hour: 如果输入了小时信息，则只合成这一个小时的数据.
+        output:
+        X_list: ai模型的输入信息.
+        """
+
+
         X_list = []
         # 需要处理：12个feature
         feature_num = 12
@@ -35,7 +44,9 @@ class FeatureProcesser:
         messager.send_to_bot_shortcut('开始梳理时间相关的特征')
         messager.send_to_bot_shortcut('开始梳理时间相关的特征 内存：{}'.format(get_memory_usage()))
 
-        time_points = self.feature_of_time()
+        # 生成 real_hour 对应的这一个小时的时间点.
+        time_points = self.feature_of_time(real_hour)
+
         messager.send_to_bot_shortcut('梳理时间相关的特征完成')
         messager.send_to_bot_shortcut('梳理时间相关的特征完成 内存：{}'.format(get_memory_usage()))
 
@@ -87,10 +98,13 @@ class FeatureProcesser:
 
         return X_list
 
-    def feature_of_time(self):
-        scheduled_time = datetime.datetime.now().replace(hour=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR'],
-                                                         minute=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['MINUTE'],
-                                                         second=AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['SECOND'],
+    def feature_of_time(self, real_hour=None):
+        if not real_hour:
+            real_hour = datetime.datetime.now().hour
+
+        scheduled_time = datetime.datetime.now().replace(hour=real_hour,
+                                                         minute=0,
+                                                         second=0,
                                                          microsecond=0)
 
         # 改为部署时预测一次.

@@ -5,6 +5,7 @@ import traceback
 import datetime
 import json
 import numpy as np
+import pandas as pd
 import gc
 
 from collections import defaultdict
@@ -285,7 +286,7 @@ class AutoMaintainer(object):
         # 存储每天模型预测的结果
         self._model_predicted_result_pool = []
         
-        # 后面改成配置
+        # 抓取的时间间隔，默认是1；后续改成配置
         self.interval_seconds = 1
         # 理论上除非修改 predefined_classes（修改离线文件），否则这里的数字是不会变化的。
         # Done, 顺序也是和库里自增序一致的。
@@ -307,9 +308,10 @@ class AutoMaintainer(object):
         2. 发送请求.
         TODO: 这里仍然要传入maintainer. 因为需要获取对应的http地址。
         """
-
+        # stage1: 获取当前时间所需蹲饼的平台（datasource_id）
         pending_datasources_id_list = self.get_pending_datasources()
         # print('####', maintainer)
+        # stage2: 已经确定需要蹲饼的datasource_id了，获取对应的post_data_list
         post_data_list = self.get_post_data_list(pending_datasources_id_list, maintainer)
 
         self._send_request(post_data_list)
@@ -317,10 +319,16 @@ class AutoMaintainer(object):
     def daily_model_predict(self):
         """
         每日更新模型全量预测结果
-        v2: 重构每日更新预测结果的逻辑。基本逻辑如下：
+
+        重构每日更新预测结果的逻辑。基本逻辑如下：
         （1）对每个小时的预测，计算理论上会有多少个数据点
         （2）实际预测并给出结果
         （3）校验结果的数量是否正确。
+
+        所用模型说明: 模型版本: v3
+        （1）固定数据源数量：训练时 DATASOURCE_POSSIBLE_NUMS = 44，有效范围 0~43 闭区间.
+        （2）直接与数据库中原始饼的 datasource 字段对应。
+        （3）实际上DATASOURCE_POSSIBLE_NUMS 是滞后的。数据库里会新增数据源，导致出现在这个范围外的。此时会替换成默认值。
         """
         messager.send_to_bot_shortcut('每日更新模型全量预测结果 开始内存：{}'.format(get_memory_usage()))
         # 拆成24个小时的数据运行
@@ -331,17 +339,23 @@ class AutoMaintainer(object):
 
         self._model_predicted_result_pool = []
         
-        # 首先计算理论返回预测结果的数量。关于self.datasource_num的更新方式，详见__init__部分说明。
+        # 首先计算理论返回预测结果的数量。关于self.datasource_num的更新方式，详见本函数开头注释的说明。
         expected_result_len =  self.datasource_num * 60 * 60 * 1
         
         # 然后开始逐小时预测.
         for j in range(24):
+            # j 是索引；real_hour 是真实时间的小时。
+
+            # j -> real_hour 对应关系：
+            real_hour = (j + AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR']) % 24
+
             try:
                 # debug
-                messager.send_to_bot_shortcut('预测第{}个小时的结果'.format(j + 1))
+                messager.send_to_bot_shortcut('预测现实时间 {}时 的结果'.format(real_hour))
 
                 messager.send_to_bot_shortcut('开始整理输入特征')
-                X_list = feat_processer.feature_combine()
+                # 现在是以小时为单位，所以需要输入小时信息（真是时间的小时）
+                X_list = feat_processer.feature_combine(real_hour)
                 messager.send_to_bot_shortcut('输入特征整理完成')
 
                 import psutil
@@ -404,10 +418,10 @@ class AutoMaintainer(object):
                 validate_result = validator.validate()
 
                 if not validate_result:
-                    messager.send_to_bot_shortcut('预测数量验证失败，差异详情:{}'.format(result.errors))
+                    messager.send_to_bot_shortcut('预测数量验证失败，差异详情:{}'.format(validate_result.errors))
 
 
-                self._set_model_predicted_result_pool(X_list, predictions, maintainer, j)
+                self._set_model_predicted_result_pool(X_list, predictions, maintainer, real_hour)
                 del predictions
                 del X_list
             except Exception as e:
@@ -517,10 +531,10 @@ class AutoMaintainer(object):
                 self.live_number_to_datasource_id_to_fetcher_count_mapping[cur_alive_fetcher_num
                         ][line['datasource_id']] = line['fetcher_count']
 
-    def _set_model_predicted_result_pool(self, X_list, predicted_result, maintainer:Maintainer, hour_index):
+    def _set_model_predicted_result_pool(self, X_list, predicted_result, maintainer:Maintainer, real_hour):
         """
         把预测结果和原始输入，整合成方便查找蹲饼时间和对应数据源的形式。
-        :param hour_index: 第几小时的结果
+        :param real_hour: 和现实对齐的时间的 小时 数值
         """
         messager.send_to_bot_shortcut('开始后处理，内存：{}'.format(get_memory_usage()))
 
@@ -558,7 +572,7 @@ class AutoMaintainer(object):
         messager.send_to_bot_shortcut('完成时间戳转换')
         messager.send_to_bot_shortcut('完成时间戳转换 内存：{}'.format(get_memory_usage()))
         print(X_list.info(memory_usage='deep'))
-        X_list['predicted_y'] = np.array(predicted_result) > 0.99999
+        X_list['predicted_y'] = np.array(predicted_result) > 0.9999
         del predicted_result
         # gc.collect()
 
@@ -619,13 +633,13 @@ class AutoMaintainer(object):
         # self._model_predicted_result_pool = X_list
         # 新：每次存储1小时的数据
         # self._model_predicted_result_pool.append(X_list)
-        # TODO: 替换成redis写入
+        # DONE: 替换成redis写入
         # X_list.to_csv('./tmp.csv', index=False)
 
         # 先压缩
         tmp_compressed_X_list = maintainer.redis.compress_data(X_list)
         # 然后存入redis，ttl 24小时
-        cur_key = 'hour_' + str(hour_index)
+        cur_key = 'hour_' + str(real_hour)
         save_redis_status = maintainer.redis.set_with_ttl(cur_key, tmp_compressed_X_list, 24 * 3600)
 
         messager.send_to_bot_shortcut('第{}小时数据存储状态：{}'.format(cur_key, save_redis_status))
@@ -636,8 +650,11 @@ class AutoMaintainer(object):
 
         messager.send_to_bot_shortcut('启动时预测当天可能有饼的时间点数量 内存：{}'.format(get_memory_usage()))
 
-    def get_pending_datasources(self,  end_time=None, time_window_seconds=None):
+    def get_pending_datasources(self, end_time=None, time_window_seconds=None):
+        """
+        获取从 end_time 往前 time_window_seconds 这段时间内，需要蹲饼的datasource_id
 
+        """
         # 设置需要判断的时间段的右端点
         if not end_time:
             end_time = datetime.datetime.now()
@@ -646,7 +663,7 @@ class AutoMaintainer(object):
       
             end_time = datetime.datetime.strptime(end_time, date_format)
         
-        # 从3点过去，经过了多少个小时
+        # 从凌晨实际开始批量预测的时间（3点）开始算，经过了多少个小时
         cur_hour_offset = max((end_time.hour + 24 - AUTO_SCHE_CONFIG['DAILY_PREPROCESS_TIME']['HOUR']) % 24, 1)
 
         # 初始化，没有开始预测的时候：
@@ -658,10 +675,7 @@ class AutoMaintainer(object):
             return []
             # return pending_datasource_id_list
 
-        # TODO: 按小时存储后的取数逻辑
-        # 用 end_time.hour 确定哪些需要取哪些数据
-        
-        # !!!DOING!!!
+        print(self._model_predicted_result_pool)
 
         X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * \
                                                                  self.interval_seconds * \
