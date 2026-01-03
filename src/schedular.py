@@ -308,6 +308,7 @@ class FetcherRequestSender(object):
         向指定的蹲饼器发送。
         具体实现在auto_maintainer.activate_send_command 方法中。
         """
+        print('try send request')
         auto_maintainer.activate_send_request(maintainer)
 
 

@@ -167,6 +167,7 @@ table_name_list = ['fetcher_datasource_config',
                   'fetcher_platform_config']
 
 table_col_names = fetch_col_names(table_name_list)
+print("table_col_names:", table_col_names)
 
 
 def select_fetcher_config(platform='') -> pd.DataFrame:

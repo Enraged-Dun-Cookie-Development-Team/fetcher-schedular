@@ -315,7 +315,9 @@ class AutoMaintainer(object):
         TODO: 这里仍然要传入maintainer. 因为需要获取对应的http地址。
         """
         # stage1: 获取当前时间所需蹲饼的平台（datasource_id）
-        pending_datasources_id_list = self.get_pending_datasources()
+        pending_datasources_id_list = self.get_pending_datasources(maintainer=maintainer)
+        # print('pending_datasources_id_list:', pending_datasources_id_list)
+
         # print('####', maintainer)
         # stage2: 已经确定需要蹲饼的datasource_id了，获取对应的post_data_list
         post_data_list = self.get_post_data_list(pending_datasources_id_list, maintainer)
@@ -387,7 +389,7 @@ class AutoMaintainer(object):
                 start_time = time.time()
                 # 在预测过程中定期调用此函数
                 predictions = []
-                batch_size = 1000
+                batch_size = 10000
                 interval = 0.005
                 messager.send_to_bot_shortcut('开始预测')
 
@@ -646,6 +648,8 @@ class AutoMaintainer(object):
         tmp_compressed_X_list = maintainer.redis.compress_data(X_list)
         # 然后存入redis，ttl 24小时
         cur_key = 'hour_' + str(real_hour)
+        print("cur_key:", cur_key)
+
         save_redis_status = maintainer.redis.set_with_ttl(cur_key, tmp_compressed_X_list, 24 * 3600)
 
         messager.send_to_bot_shortcut('第{}小时数据存储状态：{}'.format(cur_key, save_redis_status))
@@ -664,11 +668,19 @@ class AutoMaintainer(object):
         """
         cur_redis = maintainer.redis
         try:
+            # print('尝试从redis中获取数据')
+            # print('当前输入信息')
+            # print("real_hour:", real_hour)
+
+            # print("debug cur_redis:", cur_redis.get('hour_{}'.format(real_hour)))
+
             d = cur_redis.extract_data(cur_redis.get('hour_{}'.format(real_hour)))
+            # print('获取数据量:', len(d))
             if len(d):
                 return d
             return pd.DataFrame()
-        except:
+        except Exception as e:
+            messager.send_to_bot_shortcut('redis数据提取失败：{}'.format(traceback.format_exc()))
             return pd.DataFrame()
 
     def get_pending_datasources(self, end_time=None, time_window_seconds=None, maintainer: Maintainer = None):
@@ -695,8 +707,10 @@ class AutoMaintainer(object):
         随后更新flag
         """
 
+        print('into: get_pending_datasources')
         # 例: 6点55更新7点的，并把flag更新到8点
-        if end_time.minute >= 55 and end_time.hour >= self.update_flag_hour + 1:
+        print('debug: end_time.hour, self.update_flag_hour', end_time.hour, self.update_flag_hour)
+        if end_time.minute >= 5 and end_time.hour >= self.update_flag_hour: # TODO: 这里原本写的是 >= + 2, 后面看下是否合理
             real_hour = end_time.hour # real_hour = 6
 
             data_cur_hour = self.get_data_by_hour_redis(real_hour, maintainer)
@@ -706,25 +720,27 @@ class AutoMaintainer(object):
 
             self.update_flag_hour += 1
 
+
+        # print("000111")
+        # print(self._data_pool_from_redis)
         # 这里需要修改成根据一个预测当天数据是否成功取到，进行判断是否先返回空.
         # 如果预测当天数据尚未完成，则返回空
-        if self._data_pool_from_redis.empty:
-            pending_datasource_id_list = list(self.datasource_id_to_config_mapping.keys())
 
-            # 调试阶段调整
-            return []
-            # return pending_datasource_id_list
+
+        # if self._data_pool_from_redis.empty:
+        #     pending_datasource_id_list = list(self.datasource_id_to_config_mapping.keys())
+        #
+        #     # 调试阶段调整
+        #     return []
+        #     # return pending_datasource_id_list
 
 
         # 从redis中取数
-
+        # print(111222)
+        # print(self._data_pool_from_redis)
 
         # 取数来的数据进行处理
-        X_list_filtered = self._model_predicted_result_pool.iloc[(cur_hour_offset - 1) * \
-                                                                 self.interval_seconds * \
-                                                                 self.datasource_num * 3600:
-                    (cur_hour_offset + 1) * self.interval_seconds * self.datasource_num * 3600
-                    ].reset_index(drop=True)
+        X_list_filtered = self._data_pool_from_redis.reset_index(drop=True)
 
         # print('^^^^^' * 4 + ' X_list_filtered')
         # print(X_list_filtered)
